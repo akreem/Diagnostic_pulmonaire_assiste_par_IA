@@ -1,0 +1,272 @@
+Sprint 2 Backlog — "Données & Prétraitement"
+Ce Sprint 2 constitue le socle technique pour l'alimentation du modèle IA en données de qualité.
+1. Informations du Sprint
+Information	Détail
+Nom du Sprint	Sprint 2 — Données & Prétraitement
+Durée	2 semaines 
+Date de début	02/03/2026
+Date de fin	15/03/2026
+Objectif du Sprint (Sprint Goal)	Mettre en place le pipeline d'ingestion et de prétraitement des images médicales (DICOM), avec anonymisation RGPD et augmentation de données
+Capacity Totale	170 heures (équivalent 25 Story Points)
+Dépendances Sprint 1	US-001 (Environnement), US-002 à US-005 (Authentification)
+
+
+2. User Stories Détaillées du Sprint 2
+US-006 : Upload d'images médicales (DICOM, PNG, JPG)
+
+Champ	Description
+Titre	Upload d'images médicales
+Description	En tant que médecin utilisateur, je veux pouvoir uploader des images médicales afin de les soumettre à l'analyse IA
+Priorité	Must Have
+Story Points	5
+Estimation Temps	20 heures
+Dépendances	US-001, US-003 (Authentification)
+
+
+Critères d'Acceptation
+•	Support des formats DICOM (Digital Imaging and Communications in Medicine) (.dcm), PNG, JPG
+•	Limite de taille configurable (ex: 50MB par fichier)
+•	Upload multiple (batch) fonctionnel
+•	Barre de progression visible pendant l'upload
+•	Notification de succès/échec après upload
+•	Fichiers stockés de manière sécurisée (chiffrés)
+
+Tâches Techniques Associées
+
+
+ID Tâche	Description	Techno	Estimation	Statut
+T-006.1	Concevoir le modèle de données MedicalImage	SQLAlchemy	2h	☐
+T-006.2	Créer la migration de base de données	Alembic	1h	☐
+T-006.3	Développer l'endpoint API POST /upload	FastAPI	4h	☐
+T-006.4	Implémenter la validation des types de fichiers	Python	2h	☐
+T-006.5	Configurer le stockage sécurisé (MinIO/S3 ou local)	Storage	3h	☐
+T-006.6	Créer le composant frontend d'upload (drag & drop)	React	4h	☐
+T-006.7	Implémenter la barre de progression	JS/Frontend	2h	☐
+T-006.8	Chiffrer les fichiers stockés (AES-256)	Cryptography	2h	☐
+
+
+US-007 : Validation des fichiers médicaux
+
+Champ	Description
+Titre	Validation des fichiers médicaux
+Description	En tant que système, je veux valider l'intégrité des fichiers uploadés afin de rejeter les fichiers corrompus ou non conformes
+Priorité	Must Have
+Story Points	3
+Estimation Temps	14 heures
+Dépendances	US-006 (Upload)
+
+Critères d'Acceptation
+•	Vérification de la signature DICOM (Preamble + DICM)
+•	Validation des métadonnées obligatoires (Modalité, PatientID, etc.)
+•	Détection des fichiers corrompus ou incomplets
+•	Message d'erreur explicite pour l'utilisateur
+•	Logs de validation stockés pour audit
+•	Tests unitaires pour chaque type de validation
+
+Tâches Techniques Associées
+
+ID Tâche	Description	Techno	Estimation	Statut
+T-007.1	Implémenter la lecture DICOM avec pydicom	pydicom	3h	☐
+T-007.2	Vérifier la structure DICOM (Preamble, DICM)	pydicom	2h	☐
+T-007.3	Valider les métadonnées obligatoires	Python	2h	☐
+T-007.4	Détecter les fichiers corrompus (try/except)	Python	2h	☐
+T-007.5	Créer les messages d'erreur utilisateur	Frontend	2h	☐
+T-007.6	Logger les échecs de validation	Logging	1h	☐
+T-007.7	Écrire les tests unitaires de validation	pytest	2h	☐
+
+US-008 : Anonymisation automatique des DICOM (RGPD)
+
+Champ	Description
+Titre	Anonymisation automatique des DICOM (Digital Imaging and Communications in Medicine)
+Description	En tant que Responsable Sécurité (RGPD), je veux anonymiser les métadonnées patients afin de garantir la confidentialité des données de santé
+Priorité	Must Have
+Story Points	8
+Estimation Temps	28 heures
+Dépendances	US-007 (Validation), Chapitre 6 (Sécurité)
+
+
+Critères d'Acceptation
+•	Suppression des 18 identifiants HIPAA/RGPD (nom, date de naissance, etc.)
+•	Conservation des métadonnées techniques nécessaires (Modalité, BodyPart, etc.)
+•	Génération d'un ID anonyme unique par patient
+•	Table de correspondance sécurisée (réversible uniquement par admin)
+•	Audit log de chaque anonymisation
+•	Conformité validée avec la checklist RGPD (Chapitre 6.3)
+
+Tâches Techniques Associées
+
+ID Tâche	Description	Techno	Estimation	Statut
+T-008.1	Identifier les tags DICOM sensibles (liste RGPD)	pydicom	3h	☐
+T-008.2	Implémenter la fonction d'anonymisation	Python	5h	☐
+T-008.3	Créer la table de correspondance (PatientID ↔ AnonID)	SQLAlchemy	3h	☐
+T-008.4	Chiffrer la table de correspondance	Cryptography	3h	☐
+T-008.5	Créer l'endpoint admin pour ré-identification (si besoin)	FastAPI	3h	☐
+T-008.6	Logger chaque action d'anonymisation (AuditLog)	Logging	2h	☐
+T-008.7	Tester l'anonymisation sur un dataset public	Test	4h	☐
+T-008.8	Rédiger la documentation de conformité RGPD	LaTeX/Word	3h	☐
+T-008.9	Validation sécurité avec l'encadreur	Réunion	2h	☐
+
+US-009 : Prétraitement des images (normalisation & augmentation)
+
+Champ	Description
+Titre	Prétraitement des images
+Description	En tant que Data Scientist, je veux prétraiter les images afin de les préparer pour l'entraînement du modèle IA
+Priorité	Must Have
+Story Points	5
+Estimation Temps	22 heures
+Dépendances	US-008 (Anonymisation)
+
+Critères d'Acceptation
+•	Conversion DICOM - Numpy Array (pixels)
+•	Normalisation des valeurs de pixels (0-1 ou -1 à 1)
+•	Redimensionnement uniforme (ex: 224x224 ou 512x512)
+•	Application de techniques d'augmentation (rotation, flip, zoom)
+•	Pipeline de prétraitement reproductible
+•	Documentation du pipeline (Chapitre 2 & 8)
+
+Tâches Techniques Associées
+
+ID Tâche	Description	Techno	Estimation	Statut
+T-009.1	Implémenter la conversion DICOM → Numpy	pydicom/NumPy	3h	☐
+T-009.2	Créer la fonction de normalisation des pixels	NumPy	2h	☐
+T-009.3	Implémenter le resizing uniforme	OpenCV/PIL	2h	☐
+T-009.4	Créer le pipeline d'augmentation (rotation, flip, etc.)	Albumentations	4h	☐
+T-009.5	Configurer les paramètres d'augmentation	Config	2h	☐
+T-009.6	Tester le pipeline sur un échantillon d'images	Test	3h	☐
+T-009.7	Optimiser les performances (batch processing)	NumPy	3h	☐
+T-009.8	Documenter le pipeline (Chapitre 2.1)	LaTeX/Word	3h	☐
+
+
+US-010 : Gestion des erreurs d'upload
+
+Champ	Description
+Titre	Gestion des erreurs d'upload
+Description	En tant que utilisateur, je veux recevoir des messages d'erreur clairs afin de comprendre et corriger les problèmes d'upload
+Priorité	Should Have
+Story Points	3
+Estimation Temps	12 heures
+Dépendances	US-006, US-007
+
+
+Critères d'Acceptation
+•	Messages d'erreur human-readable (pas de stack traces)
+•	Codes d'erreur HTTP appropriés (400, 413, 415, 500)
+•	Suggestions de correction affichées à l'utilisateur
+•	Logs d'erreur côté serveur pour débogage
+•	Tests de chaque scénario d'erreur
+
+Tâches Techniques Associées
+
+ID Tâche	Description	Techno	Estimation	Statut
+T-010.1	Définir la liste des erreurs possibles	Documentation	1h	☐
+T-010.2	Créer les messages d'erreur utilisateur	Frontend	2h	☐
+T-010.3	Implémenter les codes HTTP appropriés	FastAPI	2h	☐
+T-010.4	Logger les erreurs serveur (sans données sensibles)	Logging	2h	☐
+T-010.5	Tester chaque scénario d'erreur	pytest	3h	☐
+T-010.6	Traduire les messages (FR/EN si nécessaire)	i18n	2h	☐
+
+
+US-041 : Collecte et préparation des datasets publics
+
+Champ	Description
+Titre	Collecte et préparation des datasets publics
+Description	En tant que Data Scientist, je veux télécharger et organiser les datasets publics afin de disposer de données pour l'entraînement (Sprint 3)
+Priorité	Must Have
+Story Points	5
+Estimation Temps	16 heures
+Dépendances	US-001 (Environnement)
+
+
+Critères d'Acceptation
+•	Datasets identifiés (NIH Chest X-ray, CheXpert, Kaggle, etc.)
+•	Téléchargement et stockage local/sécurisé
+•	Organisation en dossiers (train/val/test)
+•	Documentation des sources et licences
+•	Statistiques des datasets (nombre d'images, classes, etc.)
+
+Tâches Techniques Associées
+
+ID Tâche	Description	Techno	Estimation	Statut
+T-041.1	Identifier et sélectionner les datasets pertinents	Recherche	2h	☐
+T-041.2	Télécharger les datasets (scripts automatisés)	Python/Wget	3h	☐
+T-041.3	Organiser la structure de dossiers	File System	2h	☐
+T-041.4	Créer un script de vérification d'intégrité	Python	2h	☐
+T-041.5	Documenter les sources et licences	Markdown	2h	☐
+T-041.6	Générer des statistiques descriptives	Pandas	3h	☐
+T-041.7	Rédiger la section dataset du mémoire (Chapitre 2)	LaTeX/Word	2h	☐
+
+
+
+
+
+Tableau des Tâches du Sprint
+
+ID	User Story	Tâche	Techno	Est. (h)	Restant (h)	Statut	Assigné à
+T-006.1	US-006	Modèle de données MedicalImage	SQLAlchemy	2	 	☐ À Faire	 
+T-006.2	US-006	Migration BDD	Alembic	1	 	☐ À Faire	 
+T-006.3	US-006	Endpoint POST /upload	FastAPI	4	 	☐ À Faire	 
+T-006.4	US-006	Validation types de fichiers	Python	2	 	☐ À Faire	 
+T-006.5	US-006	Stockage sécurisé (MinIO/S3)	Storage	3	 	☐ À Faire	 
+T-006.6	US-006	Composant frontend upload	React	4	 	☐ À Faire	 
+T-006.7	US-006	Barre de progression	JS	2	 	☐ À Faire	 
+T-006.8	US-006	Chiffrement fichiers stockés	Crypto	2	 	☐ À Faire	 
+T-007.1	US-007	Lecture DICOM (Digital Imaging and Communications in Medicine) avec pydicom	pydicom	3	 	☐ À Faire	 
+T-007.2	US-007	Vérifier structure DICOM	pydicom	2	 	☐ À Faire	 
+T-007.3	US-007	Valider métadonnées obligatoires	Python	2	 	☐ À Faire	 
+T-007.4	US-007	Détecter fichiers corrompus	Python	2	 	☐ À Faire	 
+T-007.5	US-007	Messages d'erreur utilisateur	Frontend	2	 	☐ À Faire	 
+T-007.6	US-007	Logger les échecs de validation	Logging	1	 	☐ À Faire	 
+T-007.7	US-007	Tests unitaires de validation	pytest	2	 	☐ À Faire	 
+T-008.1	US-008	Identifier tags DICOM sensibles	pydicom	3	 	☐ À Faire	 
+T-008.2	US-008	Fonction d'anonymisation	Python	5	 	☐ À Faire	 
+T-008.3	US-008	Table de correspondance	SQLAlchemy	3	 	☐ À Faire	 
+T-008.4	US-008	Chiffrer table de correspondance	Crypto	3	 	☐ À Faire	 
+T-008.5	US-008	Endpoint admin ré-identification	FastAPI	3	 	☐ À Faire	 
+T-008.6	US-008	Logger anonymisation (AuditLog)	Logging	2	 	☐ À Faire	 
+T-008.7	US-008	Tester anonymisation dataset	Test	4	 	☐ À Faire	 
+T-008.8	US-008	Documentation conformité RGPD	LaTeX	3	 	☐ À Faire	 
+T-008.9	US-008	Validation sécurité encadreur	Réunion	2	 	☐ À Faire	 
+T-009.1	US-009	Conversion DICOM → Numpy	pydicom	3	 	☐ À Faire	 
+T-009.2	US-009	Normalisation des pixels	NumPy	2	 	☐ À Faire	 
+T-009.3	US-009	Resizing uniforme	OpenCV	2	 	☐ À Faire	 
+T-009.4	US-009	Pipeline d'augmentation	Albumentations	4	 	☐ À Faire	 
+T-009.5	US-009	Configurer paramètres augmentation	Config	2	 	☐ À Faire	 
+T-009.6	US-009	Tester pipeline échantillon	Test	3	 	☐ À Faire	 
+T-009.7	US-009	Optimiser performances (batch)	NumPy	3	 	☐ À Faire	 
+T-009.8	US-009	Documenter pipeline (Chapitre 2)	LaTeX	3	 	☐ À Faire	 
+T-010.1	US-010	Définir liste des erreurs	Doc	1	 	☐ À Faire	 
+T-010.2	US-010	Messages d'erreur utilisateur	Frontend	2	 	☐ À Faire	 
+T-010.3	US-010	Codes HTTP appropriés	FastAPI	2	 	☐ À Faire	 
+T-010.4	US-010	Logger erreurs serveur	Logging	2	 	☐ À Faire	 
+T-010.5	US-010	Tester scénarios d'erreur	pytest	3	 	☐ À Faire	 
+T-010.6	US-010	Traduction messages (FR/EN)	i18n	2	 	☐ À Faire	 
+T-041.1	US-041	Identifier datasets pertinents	Recherche	2	 	☐ À Faire	 
+T-041.2	US-041	Télécharger datasets	Python	3	 	☐ À Faire	 
+T-041.3	US-041	Organiser structure dossiers	FS	2	 	☐ À Faire	 
+T-041.4	US-041	Script vérification intégrité	Python	2	 	☐ À Faire	 
+T-041.5	US-041	Documenter sources et licences	Markdown	2	 	☐ À Faire	 
+T-041.6	US-041	Générer statistiques descriptives	Pandas	3	 	☐ À Faire	 
+T-041.7	US-041	Rédiger section dataset (Chapitre 2)	LaTeX	2	 	☐ À Faire	 
+TOTAL	 	 	 	170h	 	 	 
+
+
+Risk Log (Journal des Risques) - Sprint 2
+
+ID	Risque	Impact	Probabilité	Mitigation	Statut
+R-005	Complexité du format DICOM (Digital Imaging and Communications in Medicine)	Élevé	Moyenne	Utiliser pydicom, tester sur datasets publics	☐ Ouvert
+R-006	Volume des données à télécharger	Moyen	Élevée	Pré-télécharger avant le S2, utiliser mirrors	☐ Ouvert
+R-007	Anonymisation incomplète (RGPD)	Élevé	Moyenne	Checklist RGPD stricte, validation encadreur	☐ Ouvert
+R-008	Performance prétraitement lent	Moyen	Faible	Profiler code, optimiser avec NumPy batch	☐ Ouvert
+R-009	Perte de données pendant upload	Élevé	Faible	Transactionnel, rollback, checksum	☐ Ouvert
+R-010	Délais de validation encadreur	Élevé	Moyenne	Rendez-vous fixe J5 du Sprint	☐ Ouvert
+
+Definition of Done 
+Pour qu'une tâche soit considérée comme terminée dans ce Sprint :
+
+Critère	Vérification
+Code	Code développé, commité et pushé sur Git
+Tests	Tests unitaires passants (couverture > 80%)
+Review	Code reviewé 
+Documentation	Code commenté, README mis à jour, section mémoire rédigée
+Sécurité	Pas de données sensibles en clair, anonymisation validée
+Démo	Fonctionnalité démontrable localement

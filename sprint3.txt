@@ -1,0 +1,71 @@
+ID User
+Story Tâche Techno Est.
+(h)
+Restant
+(h) Statut Assigné à
+T-011.1 US-011 Sélectionner architecture CNN Recherche 4 ☐ À Faire
+T-011.2 US-011 Implémenter architecture modèle PyTorch 8 ☐ À Faire
+T-011.3 US-011 Charger poids pré-entraînés TorchVision 3 ☐ À Faire
+T-011.4 US-011 Endpoint API POST /predict FastAPI 5 ☐ À Faire
+T-011.5 US-011 Intégrer pipeline prétraitement Python 4 ☐ À Faire
+T-011.6 US-011 Optimiser temps inférence CUDA/ONNX 6 ☐ À Faire
+T-011.7 US-011 Tests unitaires inférence pytest 5 ☐ À Faire
+T-011.8 US-011 Documenter architecture (Chapitre 2) LaTeX 5 ☐ À Faire
+T-011.9 US-011 Versionner modèle (DVC/MLflow) DVC 5 ☐ À Faire
+T-012.1 US-012 Split datasets (train/val/test) Python 3 ☐ À Faire
+T-012.2 US-012 Créer DataLoaders25 PyTorch 4 ☐ À Faire
+T-012.3 US-012 Implémenter fonction de perte PyTorch 3 ☐ À Faire
+T-012.4 US-012 Configurer optimiseur/scheduler PyTorch 3 ☐ À Faire
+T-012.5 US-012 Implémenter callbacks PyTorch 4 ☐ À Faire
+T-012.6 US-012 Lancer entraînement (epochs) GPU 10 ☐ À Faire
+T-012.7 US-012 Monitorer métriques (TensorBoard) TensorBoard 4 ☐ À Faire
+
+T-012.8 US-012 Sauvegarder meilleurs poids File System 2 ☐ À Faire
+T-012.9 US-012 Générer courbes apprentissage Matplotlib 3 ☐ À Faire
+T-012.10 US-012 Documenter processus (Chapitre 8) LaTeX 5 ☐ À Faire
+T-012.11 US-012 Versionner expériences (MLflow) MLflow 5 ☐ À Faire
+T-012.12 US-012 Backup modèle entraîné Storage 4 ☐ À Faire
+T-013.1 US-013 Étudier algorithmes XAI Recherche 4 ☐ À Faire
+T-013.2 US-013 Implémenter Grad-CAM PyTorch 8 ☐ À Faire
+T-013.3 US-013 Superposition heatmap/image OpenCV 4 ☐ À Faire
+T-013.4 US-013 Configurer palette couleurs Matplotlib 2 ☐ À Faire
+T-013.5 US-013 Endpoint API GET /heatmap FastAPI 4 ☐ À Faire
+T-013.6 US-013 Export PNG avec heatmap Python 3 ☐ À Faire
+T-013.7 US-013 Tester cohérence heatmaps Test 4 ☐ À Faire
+T-013.8 US-013 Documenter XAI (Chapitre 2.3.6) LaTeX 4 ☐ À Faire
+T-013.9 US-013 Comparer autres méthodes XAI Captum 2 ☐ À Faire
+T-014.1 US-014 Calcul probabilité (softmax) PyTorch 2 ☐ À Faire
+T-014.2 US-014 Convertir en pourcentage Python 1 ☐ À Faire
+T-014.3 US-014 Définir seuils confiance Config 2 ☐ À Faire
+T-014.4 US-014 Intégrer réponse API /predict FastAPI 3 ☐ À Faire
+T-014.5 US-014 Indicateur visuel frontend React 3 ☐ À Faire
+T-014.6 US-014 Tester niveaux confiance Test 2 ☐ À Faire
+T-014.7 US-014 Documenter (Chapitre 4.2.3) LaTeX 2 ☐ À Faire
+T-015.1 US-015 Définir seuil confiance critique Config 2 ☐ À Faire
+T-015.2 US-015 Logique détection cas ambigus Python 3 ☐ À Faire
+
+T-015.3 US-015 Flag dans modèle de données SQLAlchemy 2 ☐ À Faire
+T-015.4 US-015 Endpoint GET /ambiguous-cases FastAPI 3 ☐ À Faire
+T-015.5 US-015 Notification email/alerte SMTP 3 ☐ À Faire
+T-015.6 US-015 Interface frontend cas à revoir React 4 ☐ À Faire
+T-015.7 US-015 Tester workflow complet Test 2 ☐ À Faire
+T-015.8 US-015 Documenter (Chapitre 4.2.5) LaTeX 1 ☐ À Faire
+T-016.1 US-016 Profiler temps inférence cProfile 3 ☐ À Faire
+T-016.2 US-016 Activer accélération GPU (Graphical
+Processing Unit)
+CUDA 4 ☐ À Faire
+T-016.3 US-016 Convertir modèle ONNX ONNX 4 ☐ À Faire
+T-016.4 US-016 Batch inference PyTorch 3 ☐ À Faire
+T-016.5 US-016 Optimiser preprocessing NumPy 3 ☐ À Faire
+T-016.6 US-016 Cache modèles chargés Redis 2 ☐ À Faire
+T-016.7 US-016 Tests de charge performance Locust 2 ☐ À Faire
+T-016.8 US-016 Documenter métriques (Chapitre 8) LaTeX 1 ☐ À Faire
+T-042.1 US-042 Calcul des métriques Scikit-learn 4 ☐ À Faire
+T-042.2 US-042 Matrice de confusion Seaborn 3 ☐ À Faire
+T-042.3 US-042 Precision, Recall, F1-Score Scikit-learn 3 ☐ À Faire
+T-042.4 US-042 Courbe ROC et AUC Matplotlib 4 ☐ À Faire
+T-042.5 US-042 Comparer benchmarks (état de l'art) Recherche 5 ☐ À Faire
+T-042.6 US-042 Export résultats (CSV, PNG) Python 2 ☐ À Faire
+T-042.7 US-042 Rédiger section 8.2 mémoire LaTeX 6 ☐ À Faire
+T-042.8 US-042 Validation résultats encadreur Réunion 3 ☐ À Faire
+TOTAL 255h 
