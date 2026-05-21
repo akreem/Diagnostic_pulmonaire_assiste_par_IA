@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -12,6 +12,7 @@ class MedicalImageStatus(StrEnum):
     validation_failed = "validation_failed"
     validated = "validated"
     anonymized = "anonymized"
+    analyzed = "analyzed"
 
 
 class MedicalImage(Base):
@@ -33,6 +34,14 @@ class MedicalImage(Base):
         nullable=False,
         index=True,
     )
+    
+    # AI Analysis Fields
+    ai_prediction: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ai_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ai_latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ai_gradcam_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    is_ambiguous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

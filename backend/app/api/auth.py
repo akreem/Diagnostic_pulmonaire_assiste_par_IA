@@ -4,19 +4,42 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
-from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, UserCreate, UserRead
+from app.models.user import User, UserRole
+from app.schemas.auth import LoginRequest, SetupStatus, TokenResponse, UserCreate, UserRead
 from app.services.audit import write_audit_log
 from app.services.email import send_registration_confirmation
 
 router = APIRouter()
 
 
+def admin_exists(db: Session) -> bool:
+    return db.scalar(select(User.id).where(User.role == UserRole.admin).limit(1)) is not None
+
+
+@router.get("/setup-status", response_model=SetupStatus)
+def read_setup_status(db: Session = Depends(get_db)) -> SetupStatus:
+    return SetupStatus(has_admin=admin_exists(db))
+
+
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register_user(payload: UserCreate, request: Request, db: Session = Depends(get_db)) -> User:
+def register_user(
+    payload: UserCreate,
+    request: Request,
+    current_user: User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    has_admin = admin_exists(db)
+    if has_admin:
+        if current_user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+        if current_user.role != UserRole.admin:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+    elif payload.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Create an administrator account to initialize the app")
+
     existing_user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if existing_user:
         write_audit_log(
@@ -82,4 +105,3 @@ def logout(request: Request, current_user: User = Depends(get_current_user), db:
         resource_id=str(current_user.id),
     )
     return {"status": "logged_out"}
-

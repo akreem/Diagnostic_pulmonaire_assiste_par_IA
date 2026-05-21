@@ -21,12 +21,21 @@ export type MedicalImage = {
   content_type: string;
   file_extension: string;
   file_size_bytes: number;
-  status: "uploaded" | "validation_failed" | "validated" | "anonymized";
+  status: "uploaded" | "validation_failed" | "validated" | "anonymized" | "analyzed";
   created_at: string;
+  ai_prediction?: string | null;
+  ai_confidence?: number | null;
+  ai_latency_ms?: number | null;
+  ai_gradcam_path?: string | null;
+  is_ambiguous?: boolean;
 };
 
 export type UploadBatchResponse = {
   images: MedicalImage[];
+};
+
+export type SetupStatus = {
+  has_admin: boolean;
 };
 
 type ApiErrorDetail = string | {
@@ -37,16 +46,35 @@ type ApiErrorDetail = string | {
   suggestion_fr?: string;
 };
 
+const errorTranslations: Record<string, string> = {
+  "Request failed": "La requête a échoué",
+  "Upload failed": "Échec de l'import",
+  "Invalid email or password": "Adresse e-mail ou mot de passe invalide",
+  "Email already registered": "Cette adresse e-mail est déjà enregistrée",
+  "Authentication required": "Authentification requise",
+  "Admin role required": "Rôle administrateur requis",
+  "Create an administrator account to initialize the app": "Créez un compte administrateur pour initialiser l'application",
+  "Invalid authentication token": "Jeton d'authentification invalide",
+  "Invalid token subject": "Sujet du jeton invalide",
+  "Inactive or missing user": "Utilisateur inactif ou introuvable",
+  "Failed to load Grad-CAM image": "Impossible de charger l'image Grad-CAM"
+};
+
+function translateError(message: string): string {
+  return errorTranslations[message] ?? message;
+}
+
 function formatApiError(detail: ApiErrorDetail | undefined): string {
   if (!detail) {
-    return "Request failed";
+    return translateError("Request failed");
   }
   if (typeof detail === "string") {
-    return detail;
+    return translateError(detail);
   }
 
-  const message = detail.message ?? "Request failed";
-  return detail.suggestion ? `${message} ${detail.suggestion}` : message;
+  const message = detail.message_fr ?? detail.message ?? "Request failed";
+  const suggestion = detail.suggestion_fr ?? detail.suggestion;
+  return suggestion ? `${translateError(message)} ${suggestion}` : translateError(message);
 }
 
 export function getToken(): string | null {
@@ -92,6 +120,10 @@ export function registerUser(payload: {
     method: "POST",
     body: JSON.stringify(payload)
   });
+}
+
+export function getSetupStatus(): Promise<SetupStatus> {
+  return request<SetupStatus>("/auth/setup-status");
 }
 
 export function loginUser(payload: { email: string; password: string }): Promise<AuthResponse> {
@@ -146,10 +178,29 @@ export function uploadMedicalImages(
         resolve(payload as UploadBatchResponse);
         return;
       }
-      reject(new Error("detail" in payload ? formatApiError(payload.detail) : "Upload failed"));
+      reject(new Error("detail" in payload ? formatApiError(payload.detail) : translateError("Upload failed")));
     };
 
-    xhr.onerror = () => reject(new Error("Upload failed"));
+    xhr.onerror = () => reject(new Error(translateError("Upload failed")));
     xhr.send(formData);
   });
+}
+
+export async function getGradcamImage(imageId: number): Promise<string> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/upload/${imageId}/gradcam`, {
+    headers
+  });
+
+  if (!response.ok) {
+    throw new Error(translateError("Failed to load Grad-CAM image"));
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }

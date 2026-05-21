@@ -70,11 +70,58 @@ async def upload_medical_images(
         content_for_storage = anonymization_result.content if anonymization_result else content
         prepared_files.append((upload, content_for_storage, safe_name, extension, anonymization_result))
 
+    from app.services.ai_client import ai_client, AIServiceError
+
     images: list[MedicalImage] = []
     patient_mappings: list[tuple[MedicalImage, DicomAnonymizationResult]] = []
     try:
         for upload, content, safe_name, extension, anonymization_result in prepared_files:
             stored = encrypt_and_store_upload(content, extension)
+            
+            # Call AI Model
+            ai_prediction = None
+            ai_confidence = None
+            ai_latency_ms = None
+            ai_gradcam_path = None
+            is_ambiguous = False
+            
+            # Because files are encrypted at rest, we must send the unencrypted raw `content`
+            # directly to the AI service rather than pointing it to the encrypted storage_path.
+            try:
+                ai_result = await ai_client.predict(safe_name, content)
+                ai_prediction = ai_result.get("prediction")
+                ai_confidence = ai_result.get("confidence")
+                ai_latency_ms = ai_result.get("latency_ms")
+                # Threshold for ambiguous logic (e.g. confidence < 0.6)
+                if ai_confidence and ai_confidence < 0.60:
+                    is_ambiguous = True
+
+                # Call Grad-CAM for explainability
+                try:
+                    gradcam_result = await ai_client.get_gradcam(safe_name, content)
+                    gradcam_b64 = gradcam_result.get("gradcam_base64")
+                    if gradcam_b64:
+                        import base64
+                        gradcam_bytes = base64.b64decode(gradcam_b64)
+                        stored_gradcam = encrypt_and_store_upload(gradcam_bytes, ".png")
+                        ai_gradcam_path = stored_gradcam.storage_path
+                except Exception as e:
+                    import traceback
+                    print(f"GRADCAM ERROR: {e}")
+                    traceback.print_exc()
+                    pass
+
+            except AIServiceError as e:
+                # Log the error but don't fail the upload completely
+                write_audit_log(
+                    db,
+                    request,
+                    action="ai_prediction_failed",
+                    resource_type="medical_image",
+                    actor_user_id=current_user.id,
+                    metadata={"error": str(e)}
+                )
+
             image = MedicalImage(
                 owner_user_id=current_user.id,
                 original_filename=safe_name,
@@ -85,7 +132,12 @@ async def upload_medical_images(
                 file_size_bytes=len(content),
                 encrypted_size_bytes=stored.encrypted_size_bytes,
                 checksum_sha256=stored.checksum_sha256,
-                status=MedicalImageStatus.anonymized if anonymization_result else MedicalImageStatus.validated,
+                status=MedicalImageStatus.analyzed if ai_prediction else (MedicalImageStatus.anonymized if anonymization_result else MedicalImageStatus.validated),
+                ai_prediction=ai_prediction,
+                ai_confidence=ai_confidence,
+                ai_latency_ms=ai_latency_ms,
+                ai_gradcam_path=ai_gradcam_path,
+                is_ambiguous=is_ambiguous
             )
             db.add(image)
             images.append(image)
@@ -132,7 +184,7 @@ async def upload_medical_images(
                 "size_bytes": image.file_size_bytes,
             },
         )
-        if image.status == MedicalImageStatus.anonymized:
+        if image.status == MedicalImageStatus.anonymized or image.status == MedicalImageStatus.analyzed:
             write_audit_log(
                 db,
                 request,
@@ -144,3 +196,27 @@ async def upload_medical_images(
             )
 
     return UploadBatchResponse(images=images)
+
+
+from fastapi.responses import Response
+
+@router.get("/{image_id}/gradcam", response_class=Response)
+async def get_gradcam_image(
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    image = db.query(MedicalImage).filter(
+        MedicalImage.id == image_id,
+        MedicalImage.owner_user_id == current_user.id
+    ).first()
+    
+    if not image or not image.ai_gradcam_path:
+        raise HTTPException(status_code=404, detail="Grad-CAM not found")
+        
+    try:
+        from app.services.upload_storage import read_encrypted_upload
+        img_bytes = read_encrypted_upload(image.ai_gradcam_path)
+        return Response(content=img_bytes, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to read encrypted heatmap")

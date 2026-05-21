@@ -19,10 +19,13 @@ services:
     build:
       context: ./backend
     env_file:
-      - ../.env.example
+      - .env
     depends_on:
       db:
         condition: service_healthy
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "8000:8000"
     volumes:

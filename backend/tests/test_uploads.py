@@ -23,6 +23,23 @@ def error_code(response) -> str:
     return response.json()["detail"]["code"]
 
 
+def create_admin_token(email: str = "admin-upload@example.com") -> str:
+    client.post(
+        "/auth/register",
+        json={
+            "email": email,
+            "full_name": "Admin Upload",
+            "password": "StrongPass123",
+            "role": "admin",
+        },
+    )
+    login = client.post(
+        "/auth/login",
+        json={"email": email, "password": "StrongPass123"},
+    )
+    return login.json()["access_token"]
+
+
 def create_test_dicom(*, include_patient_id: bool = True, include_modality: bool = True) -> bytes:
     file_meta = FileMetaDataset()
     file_meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
@@ -46,8 +63,10 @@ def create_test_dicom(*, include_patient_id: bool = True, include_modality: bool
 
 
 def register_and_login() -> str:
+    admin_token = create_admin_token()
     client.post(
         "/auth/register",
+        headers={"Authorization": f"Bearer {admin_token}"},
         json={
             "email": "uploader@example.com",
             "full_name": "Dr Upload",
@@ -63,20 +82,7 @@ def register_and_login() -> str:
 
 
 def register_and_login_admin() -> str:
-    client.post(
-        "/auth/register",
-        json={
-            "email": "admin-upload@example.com",
-            "full_name": "Admin Upload",
-            "password": "StrongPass123",
-            "role": "admin",
-        },
-    )
-    login = client.post(
-        "/auth/login",
-        json={"email": "admin-upload@example.com", "password": "StrongPass123"},
-    )
-    return login.json()["access_token"]
+    return create_admin_token()
 
 
 def test_authenticated_user_can_upload_png_batch(tmp_path, monkeypatch):

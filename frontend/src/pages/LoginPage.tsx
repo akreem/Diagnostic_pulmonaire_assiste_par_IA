@@ -20,24 +20,50 @@ export function LoginPage({ onLogin }: Props) {
       saveToken(response.access_token);
       onLogin(response.user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Échec de la connexion");
     }
   }
 
   return (
-    <form className="auth-panel" onSubmit={submit}>
-      <h1>Sign in</h1>
+    <form className="evax-login-card" onSubmit={submit}>
+      <div className="evax-login-topline">
+        <span>Français</span>
+        <span>Arabe</span>
+      </div>
+
+      <div className="evax-login-title">
+        <span className="evax-login-logo">IA</span>
+        <p>Espace professionnel</p>
+        <h1>Connexion</h1>
+      </div>
+
       <label>
-        Email
-        <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+        Adresse e-mail
+        <input
+          autoComplete="email"
+          placeholder="nom@hopital.tn"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          type="email"
+        />
       </label>
       <label>
-        Password
-        <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
+        Mot de passe
+        <input
+          autoComplete="current-password"
+          placeholder="Mot de passe"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          type="password"
+        />
       </label>
       {error && <p className="error">{error}</p>}
-      <button type="submit">Login</button>
+      <button className="evax-login-button" type="submit">Se connecter</button>
+
+      <div className="evax-login-footer">
+        <span>Assistance technique</span>
+        <strong>Diagnostic IA</strong>
+      </div>
     </form>
   );
 }
-

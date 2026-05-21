@@ -20,6 +20,10 @@ class UserRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SetupStatus(BaseModel):
+    has_admin: bool
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -29,4 +33,3 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserRead
-
