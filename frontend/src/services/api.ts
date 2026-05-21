@@ -137,6 +137,10 @@ export function getCurrentUser(): Promise<User> {
   return request<User>("/auth/me");
 }
 
+export function listUsers(): Promise<User[]> {
+  return request<User[]>("/auth/users");
+}
+
 export async function logoutUser(): Promise<void> {
   const token = getToken();
   if (token) {

@@ -83,6 +83,44 @@ def test_admin_can_register_user_then_user_can_login():
     assert logout.json()["status"] == "logged_out"
 
 
+def test_admin_can_list_users():
+    admin_token = create_admin_token()
+    client.post(
+        "/auth/register",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "email": "doctor@example.com",
+            "full_name": "Dr Example",
+            "password": "StrongPass123",
+            "role": "doctor",
+        },
+    )
+
+    response = client.get("/auth/users", headers={"Authorization": f"Bearer {admin_token}"})
+
+    assert response.status_code == 200
+    assert [user["email"] for user in response.json()] == ["doctor@example.com", "admin@example.com"]
+
+
+def test_non_admin_cannot_list_users():
+    admin_token = create_admin_token()
+    client.post(
+        "/auth/register",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "email": "doctor@example.com",
+            "full_name": "Dr Example",
+            "password": "StrongPass123",
+            "role": "doctor",
+        },
+    )
+    login = client.post("/auth/login", json={"email": "doctor@example.com", "password": "StrongPass123"})
+
+    response = client.get("/auth/users", headers={"Authorization": f"Bearer {login.json()['access_token']}"})
+
+    assert response.status_code == 403
+
+
 def test_public_registration_closes_after_admin_exists():
     create_admin_token()
 

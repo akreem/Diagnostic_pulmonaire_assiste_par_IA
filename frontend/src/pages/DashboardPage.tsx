@@ -1,7 +1,7 @@
 import { DragEvent, useEffect, useState } from "react";
 
 import { RegisterPage } from "./RegisterPage";
-import { getGradcamImage, MedicalImage, uploadMedicalImages, User } from "../services/api";
+import { getGradcamImage, listUsers, MedicalImage, uploadMedicalImages, User } from "../services/api";
 
 type Props = {
   user: User;
@@ -16,7 +16,7 @@ const dashboardRoutes: Record<PanelId, string> = {
   intake: "/import-analyse",
   results: "/resultats",
   history: "/historique",
-  admin: "/utilisateurs"
+  admin: "/gestion-utilisateurs"
 };
 
 const dashboardPages: Array<{ id: PanelId; title: string; icon: IconName; adminOnly?: boolean }> = [
@@ -28,6 +28,10 @@ const dashboardPages: Array<{ id: PanelId; title: string; icon: IconName; adminO
 ];
 
 function routeToPanel(pathname: string): PanelId {
+  if (pathname === "/utilisateurs") {
+    window.history.replaceState({}, "", dashboardRoutes.admin);
+    return "admin";
+  }
   const match = Object.entries(dashboardRoutes).find(([, route]) => route === pathname);
   return match ? (match[0] as PanelId) : "overview";
 }
@@ -144,6 +148,9 @@ export function DashboardPage({ user, onLogout }: Props) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [users, setUsers] = useState<User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
 
   useEffect(() => {
     function handleRouteChange() {
@@ -157,6 +164,12 @@ export function DashboardPage({ user, onLogout }: Props) {
   useEffect(() => {
     if (user.role !== "admin" && (activePanel === "history" || activePanel === "admin")) {
       navigateTo("overview", true);
+    }
+  }, [activePanel, user.role]);
+
+  useEffect(() => {
+    if (activePanel === "admin" && user.role === "admin") {
+      loadUsers();
     }
   }, [activePanel, user.role]);
 
@@ -206,6 +219,18 @@ export function DashboardPage({ user, onLogout }: Props) {
       }
     }
     setActivePanel(panel);
+  }
+
+  async function loadUsers() {
+    setUsersLoading(true);
+    setUsersError("");
+    try {
+      setUsers(await listUsers());
+    } catch (err) {
+      setUsersError(err instanceof Error ? err.message : "Impossible de charger les utilisateurs");
+    } finally {
+      setUsersLoading(false);
+    }
   }
 
   function renderPage(panel: PanelId) {
@@ -310,13 +335,71 @@ export function DashboardPage({ user, onLogout }: Props) {
 
     return (
       <div className="evax-dashboard-page evax-admin-body">
-        <RegisterPage mode="admin" onRegistered={() => undefined} />
+        <section className="users-management">
+          <div className="users-management-header">
+            <div>
+              <h3>Utilisateurs</h3>
+              <p>Liste des comptes autorises a acceder a la plateforme.</p>
+            </div>
+            <button className="secondary" onClick={loadUsers} type="button">
+              Actualiser
+            </button>
+          </div>
+
+          {usersError && <p className="error">{usersError}</p>}
+
+          <div className="users-table-wrap">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Nom complet</th>
+                  <th>Adresse e-mail</th>
+                  <th>Role</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usersLoading ? (
+                  <tr>
+                    <td colSpan={4}>Chargement des utilisateurs...</td>
+                  </tr>
+                ) : users.length > 0 ? (
+                  users.map((managedUser) => (
+                    <tr key={managedUser.id}>
+                      <td>{managedUser.full_name}</td>
+                      <td>{managedUser.email}</td>
+                      <td>{roleLabel(managedUser.role)}</td>
+                      <td>
+                        <span className={managedUser.is_active ? "status-pill active" : "status-pill inactive"}>
+                          {managedUser.is_active ? "Actif" : "Inactif"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4}>Aucun utilisateur disponible.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="create-user-panel">
+          <div>
+            <h3>Ajouter un utilisateur</h3>
+            <p>Creez un compte medecin, technicien ou administrateur.</p>
+          </div>
+          <RegisterPage mode="admin" onRegistered={loadUsers} />
+        </section>
       </div>
     );
   }
 
   const visiblePages = dashboardPages.filter((page) => !page.adminOnly || user.role === "admin");
   const activePage = visiblePages.find((page) => page.id === activePanel) ?? visiblePages[0];
+  const userInitial = user.full_name.trim().charAt(0).toUpperCase() || "U";
 
   return (
     <main className="evax-dashboard">
@@ -329,16 +412,25 @@ export function DashboardPage({ user, onLogout }: Props) {
           </div>
         </div>
 
-        <nav className="evax-side-menu" aria-label="Navigation du tableau de bord">
-          {visiblePages.map((page) => (
-            <button className={activePanel === page.id ? "active" : ""} key={page.id} onClick={() => navigateTo(page.id)} type="button">
-              <Icon name={page.icon} />
-              {page.title}
-            </button>
-          ))}
-        </nav>
+        <div className="sidebar-nav-group">
+          <span className="sidebar-section-label">Navigation</span>
+          <nav className="evax-side-menu" aria-label="Navigation du tableau de bord">
+            {visiblePages.map((page) => (
+              <button className={activePanel === page.id ? "active" : ""} key={page.id} onClick={() => navigateTo(page.id)} type="button">
+                <Icon name={page.icon} />
+                <span>{page.title}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
 
-        <small className="evax-sidebar-copy">Edition initiale</small>
+        <div className="sidebar-user-card" aria-label="Utilisateur connecte">
+          <span>{userInitial}</span>
+          <div>
+            <strong>{user.full_name}</strong>
+            <small>{roleLabel(user.role)}</small>
+          </div>
+        </div>
       </aside>
 
       <section className="evax-dashboard-main">
