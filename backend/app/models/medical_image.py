@@ -47,3 +47,15 @@ class MedicalImage(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    @property
+    def ai_error_message(self) -> str | None:
+        return getattr(self, "_ai_error_message", None)
+
+    @property
+    def ai_analysis_status(self) -> str:
+        if self.ai_error_message:
+            return "failed"
+        if self.ai_prediction:
+            return "completed"
+        return "pending"

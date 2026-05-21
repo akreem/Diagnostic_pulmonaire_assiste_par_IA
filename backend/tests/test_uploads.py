@@ -111,6 +111,37 @@ def test_authenticated_user_can_upload_png_batch(tmp_path, monkeypatch):
     assert stored_path.read_bytes() != png_content
 
 
+def test_upload_reports_ai_model_connection_failure(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
+    token = register_and_login()
+    png_content = b"\x89PNG\r\n\x1a\n" + b"scan-data"
+
+    async def fail_prediction(_filename: str, _content: bytes, _threshold: float = 0.5):
+        from app.services.ai_client import AIServiceError
+
+        raise AIServiceError("Connexion au modele IA impossible.")
+
+    monkeypatch.setattr("app.services.ai_client.ai_client.predict", fail_prediction)
+
+    response = client.post(
+        "/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files=[("files", ("scan.png", png_content, "image/png"))],
+    )
+
+    assert response.status_code == 201
+    image = response.json()["images"][0]
+    assert image["status"] == "validated"
+    assert image["ai_analysis_status"] == "failed"
+    assert image["ai_error_message"] == "Connexion au modele IA impossible."
+    assert image["ai_prediction"] is None
+
+    with SessionLocal() as db:
+        rows = db.scalars(select(AuditLog).where(AuditLog.action == "ai_prediction_failed")).all()
+
+    assert rows
+
+
 def test_authenticated_user_can_upload_valid_dicom(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
     token = register_and_login()

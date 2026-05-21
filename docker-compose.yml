@@ -23,6 +23,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      model-service:
+        condition: service_healthy
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -30,6 +32,23 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+
+  model-service:
+    build:
+      context: ../deploy
+      dockerfile: Dockerfile
+    environment:
+      - ORT_NUM_THREADS=4
+    ports:
+      - "8001:8000"
+    volumes:
+      - ../checkpoints:/app/checkpoints:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:

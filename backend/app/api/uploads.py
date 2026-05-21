@@ -83,6 +83,7 @@ async def upload_medical_images(
             ai_confidence = None
             ai_latency_ms = None
             ai_gradcam_path = None
+            ai_error_message = None
             is_ambiguous = False
             
             # Because files are encrypted at rest, we must send the unencrypted raw `content`
@@ -112,6 +113,7 @@ async def upload_medical_images(
                     pass
 
             except AIServiceError as e:
+                ai_error_message = str(e)
                 # Log the error but don't fail the upload completely
                 write_audit_log(
                     db,
@@ -139,6 +141,7 @@ async def upload_medical_images(
                 ai_gradcam_path=ai_gradcam_path,
                 is_ambiguous=is_ambiguous
             )
+            image._ai_error_message = ai_error_message
             db.add(image)
             images.append(image)
             if anonymization_result:
@@ -171,7 +174,9 @@ async def upload_medical_images(
         ) from exc
 
     for image in images:
+        ai_error_message = getattr(image, "_ai_error_message", None)
         db.refresh(image)
+        image._ai_error_message = ai_error_message
         write_audit_log(
             db,
             request,

@@ -20,6 +20,8 @@ class MedicalImageRead(BaseModel):
     ai_latency_ms: float | None = None
     ai_gradcam_path: str | None = None
     is_ambiguous: bool = False
+    ai_analysis_status: str = "pending"
+    ai_error_message: str | None = None
 
 
 class UploadBatchResponse(BaseModel):

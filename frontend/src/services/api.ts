@@ -28,6 +28,8 @@ export type MedicalImage = {
   ai_latency_ms?: number | null;
   ai_gradcam_path?: string | null;
   is_ambiguous?: boolean;
+  ai_analysis_status?: "pending" | "completed" | "failed";
+  ai_error_message?: string | null;
 };
 
 export type UploadBatchResponse = {
