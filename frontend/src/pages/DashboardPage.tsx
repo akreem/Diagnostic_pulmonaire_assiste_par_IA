@@ -1,7 +1,20 @@
-import { DragEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { DragEvent, memo, PointerEvent, ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react";
+import Chart from "chart.js/auto";
+import type { Chart as ChartInstance, ChartType } from "chart.js";
 
 import { RegisterPage } from "./RegisterPage";
-import { getGradcamImage, listUsers, MedicalImage, uploadMedicalImages, User } from "../services/api";
+import {
+  DashboardStats,
+  exportHistoryCsv,
+  getAnalysisResult,
+  getDashboardStats,
+  getGradcamImage,
+  getMedicalImage,
+  listUsers,
+  MedicalImage,
+  uploadMedicalImages,
+  User
+} from "../services/api";
 
 type Props = {
   user: User;
@@ -18,6 +31,7 @@ type IconName =
   | "chevronDown"
   | "contrast"
   | "dashboard"
+  | "drag"
   | "fileText"
   | "logout"
   | "lungs"
@@ -27,7 +41,8 @@ type IconName =
   | "settings"
   | "shield"
   | "upload"
-  | "zoomIn";
+  | "zoomIn"
+  | "zoomOut";
 
 type Severity = "Normal" | "Suspect" | "Critique";
 
@@ -123,6 +138,14 @@ function Icon({ name }: { name: IconName }) {
         <rect x="3" y="15" width="7" height="6" rx="1" />
       </>
     ),
+    drag: (
+      <>
+        <path d="M5 9V6a2 2 0 0 1 4 0v3" />
+        <path d="M9 9V5a2 2 0 0 1 4 0v4" />
+        <path d="M13 10V6a2 2 0 0 1 4 0v7" />
+        <path d="M17 11a2 2 0 0 1 4 0v2c0 5-3 8-8 8h-1a7 7 0 0 1-5.6-2.8L3 14a2 2 0 0 1 3.2-2.4L8 14" />
+      </>
+    ),
     fileText: (
       <>
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
@@ -196,6 +219,13 @@ function Icon({ name }: { name: IconName }) {
         <path d="M11 8v6" />
         <path d="M8 11h6" />
       </>
+    ),
+    zoomOut: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3" />
+        <path d="M8 11h6" />
+      </>
     )
   };
 
@@ -206,19 +236,141 @@ function Icon({ name }: { name: IconName }) {
   );
 }
 
-function GradcamViewer({ imageId }: { imageId: number }) {
-  const [url, setUrl] = useState<string | null>(null);
+function useNearViewport<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
 
   useEffect(() => {
-    getGradcamImage(imageId).then(setUrl).catch(() => null);
-  }, [imageId]);
+    const element = ref.current;
+    if (!element || isNearViewport) return;
 
-  if (!url) {
+    if (!("IntersectionObserver" in window)) {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "360px 0px" }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isNearViewport]);
+
+  return { ref, isNearViewport };
+}
+
+const CanvasOverlayViewer = memo(function CanvasOverlayViewer({
+  imageId,
+  canvasRef,
+  onReady
+}: {
+  imageId: number;
+  canvasRef: RefObject<HTMLCanvasElement>;
+  onReady: (ready: boolean) => void;
+}) {
+  const [baseUrl, setBaseUrl] = useState<string | null>(null);
+  const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const objectUrls: string[] = [];
+    setBaseUrl(null);
+    setHeatmapUrl(null);
+    onReady(false);
+
+    Promise.allSettled([getMedicalImage(imageId), getGradcamImage(imageId)]).then(([baseResult, heatmapResult]) => {
+      if (!mounted) return;
+
+      if (baseResult.status === "fulfilled") {
+        objectUrls.push(baseResult.value);
+        setBaseUrl(baseResult.value);
+      }
+
+      if (heatmapResult.status === "fulfilled") {
+        objectUrls.push(heatmapResult.value);
+        setHeatmapUrl(heatmapResult.value);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageId, onReady]);
+
+  useEffect(() => {
+    if ((!baseUrl && !heatmapUrl) || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const canvasContext = context;
+
+    let cancelled = false;
+
+    function loadDrawableImage(url: string | null): Promise<HTMLImageElement | null> {
+      if (!url) return Promise.resolve(null);
+
+      return new Promise((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = url;
+      });
+    }
+
+    async function drawOverlay() {
+      const [baseImage, heatmapImage] = await Promise.all([loadDrawableImage(baseUrl), loadDrawableImage(heatmapUrl)]);
+      if (cancelled) return;
+
+      const drawableImage = baseImage ?? heatmapImage;
+      if (!drawableImage) {
+        onReady(false);
+        return;
+      }
+
+      const width = drawableImage.naturalWidth;
+      const height = drawableImage.naturalHeight;
+      if (!width || !height) return;
+
+      canvas.width = width;
+      canvas.height = height;
+      canvasContext.clearRect(0, 0, width, height);
+
+      if (baseImage) {
+        canvasContext.drawImage(baseImage, 0, 0, width, height);
+      }
+
+      if (heatmapImage) {
+        canvasContext.globalAlpha = baseImage ? 0.58 : 1;
+        canvasContext.globalCompositeOperation = "source-over";
+        canvasContext.drawImage(heatmapImage, 0, 0, width, height);
+      }
+
+      canvasContext.globalAlpha = 1;
+      onReady(true);
+    }
+
+    drawOverlay();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baseUrl, canvasRef, heatmapUrl, onReady]);
+
+  if (!baseUrl && !heatmapUrl) {
     return <div className="scan-skeleton" aria-label="Chargement de la carte Grad-CAM" />;
   }
 
-  return <img src={url} alt="Carte d'explicabilite Grad-CAM" className="gradcam-image" />;
-}
+  return <canvas ref={canvasRef} aria-label="Superposition image et heatmap Grad-CAM" className="scan-overlay-canvas" />;
+});
 
 function roleLabel(role: User["role"]) {
   const labels: Record<User["role"], string> = {
@@ -304,38 +456,297 @@ function ConfidenceBar({ value }: { value: number }) {
   );
 }
 
-function ScanViewer({ image }: { image: MedicalImage }) {
+function DashboardChart({
+  title,
+  type,
+  labels,
+  values,
+  colors
+}: {
+  title: string;
+  type: ChartType;
+  labels: string[];
+  values: number[];
+  colors: string[];
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chartRef = useRef<ChartInstance | null>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    chartRef.current?.destroy();
+    chartRef.current = new Chart(canvasRef.current, {
+      type,
+      data: {
+        labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: colors,
+            borderColor: colors,
+            borderRadius: type === "bar" ? 6 : undefined,
+            borderWidth: type === "doughnut" ? 0 : 1
+          }
+        ]
+      },
+      options: {
+        animation: false,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: type !== "bar",
+            position: "bottom",
+            labels: {
+              boxWidth: 10,
+              color: "#475569",
+              font: { size: 11, weight: 700 }
+            }
+          },
+          title: { display: false }
+        },
+        scales:
+          type === "bar"
+            ? {
+                x: {
+                  grid: { display: false },
+                  ticks: { color: "#64748b", font: { size: 11, weight: 700 } }
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: { precision: 0, color: "#64748b" }
+                }
+              }
+            : undefined
+      }
+    });
+
+    return () => chartRef.current?.destroy();
+  }, [colors, labels, type, values]);
+
   return (
-    <section className="scan-viewer-panel" aria-label="Visionneuse medicale">
-      <div className="scan-toolbar" aria-label="Outils d'imagerie">
-        {(["zoomIn", "contrast", "brightness", "measure"] as IconName[]).map((tool) => (
-          <button className="tool-button" key={tool} type="button">
-            <Icon name={tool} />
-          </button>
-        ))}
+    <section className="clinical-panel chart-panel">
+      <div>
+        <p className="section-kicker">Chart.js</p>
+        <h2>{title}</h2>
       </div>
-      <div className="scan-canvas">
-        {image.status === "analyzed" ? <GradcamViewer imageId={image.id} /> : <div className="scan-skeleton" />}
-        {image.ai_prediction === "PNEUMONIA" && (
-          <div className="scan-annotation">
-            <span>Opacite suspecte</span>
-          </div>
-        )}
+      <div className="chart-canvas-wrap">
+        <canvas ref={canvasRef} />
       </div>
     </section>
   );
 }
 
-function DiagnosticResultCard({ image, user }: { image: MedicalImage; user: User }) {
-  const severity = getSeverity(image);
-  const confidence = confidencePercent(image);
+const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) {
+  const annotatedCanvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref: viewportRef, isNearViewport } = useNearViewport<HTMLDivElement>();
+  const [zoom, setZoom] = useState(1);
+  const [brightness, setBrightness] = useState(1);
+  const [contrast, setContrast] = useState(1);
+  const [measureEnabled, setMeasureEnabled] = useState(false);
+  const [dragEnabled, setDragEnabled] = useState(false);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const [canExport, setCanExport] = useState(false);
+  const zoomPercent = Math.round(zoom * 100);
+  const brightnessPercent = Math.round(brightness * 100);
+  const contrastPercent = Math.round(contrast * 100);
+
+  function changeZoom(delta: number) {
+    setZoom((current) => Math.min(2.5, Math.max(0.75, Number((current + delta).toFixed(2)))));
+  }
+
+  function cycleBrightness() {
+    setBrightness((current) => (current >= 1.3 ? 0.85 : Number((current + 0.15).toFixed(2))));
+  }
+
+  function cycleContrast() {
+    setContrast((current) => (current >= 1.4 ? 0.85 : Number((current + 0.15).toFixed(2))));
+  }
+
+  function resetViewer() {
+    setZoom(1);
+    setBrightness(1);
+    setContrast(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  function exportAnnotatedImage() {
+    const canvas = annotatedCanvasRef.current;
+    if (!canvas) return;
+
+    const link = document.createElement("a");
+    const safeName = image.original_filename.replace(/\.[^.]+$/, "").replace(/[^a-z0-9_-]+/gi, "-").toLowerCase();
+    link.download = `${safeName || "analysis"}-annotated.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (!dragEnabled) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragStart({ x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y });
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!dragStart) return;
+    setPan({
+      x: dragStart.panX + event.clientX - dragStart.x,
+      y: dragStart.panY + event.clientY - dragStart.y
+    });
+  }
+
+  function handlePointerEnd(event: PointerEvent<HTMLDivElement>) {
+    if (dragStart) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDragStart(null);
+  }
+
+  return (
+    <section className="scan-viewer-panel" aria-label="Visionneuse medicale">
+      <div className="scan-toolbar" aria-label="Outils d'imagerie">
+        <button
+          aria-pressed={dragEnabled}
+          aria-label="Déplacer l'image"
+          className={`tool-button ${dragEnabled ? "active" : ""}`}
+          onClick={() => setDragEnabled((enabled) => !enabled)}
+          title="Déplacer l'image"
+          type="button"
+        >
+          <Icon name="drag" />
+        </button>
+        <button
+          aria-label="Réduire le zoom"
+          className="tool-button"
+          disabled={zoom <= 0.75}
+          onClick={() => changeZoom(-0.25)}
+          title="Réduire le zoom"
+          type="button"
+        >
+          <Icon name="zoomOut" />
+        </button>
+        <button
+          aria-label="Agrandir le zoom"
+          className="tool-button"
+          disabled={zoom >= 2.5}
+          onClick={() => changeZoom(0.25)}
+          title="Agrandir le zoom"
+          type="button"
+        >
+          <Icon name="zoomIn" />
+        </button>
+        <button
+          aria-label="Réinitialiser le zoom"
+          className="tool-button zoom-reset-button"
+          onClick={() => setZoom(1)}
+          title="Réinitialiser le zoom"
+          type="button"
+        >
+          {zoomPercent}%
+        </button>
+        <button
+          aria-label={`Contraste ${contrastPercent}%`}
+          className={`tool-button ${contrast !== 1 ? "active" : ""}`}
+          onClick={cycleContrast}
+          title={`Contraste ${contrastPercent}%`}
+          type="button"
+        >
+          <Icon name="contrast" />
+        </button>
+        <button
+          aria-label={`Luminosité ${brightnessPercent}%`}
+          className={`tool-button ${brightness !== 1 ? "active" : ""}`}
+          onClick={cycleBrightness}
+          title={`Luminosité ${brightnessPercent}%`}
+          type="button"
+        >
+          <Icon name="brightness" />
+        </button>
+        <button
+          aria-pressed={measureEnabled}
+          aria-label="Afficher la mesure"
+          className={`tool-button ${measureEnabled ? "active" : ""}`}
+          onClick={() => setMeasureEnabled((enabled) => !enabled)}
+          title="Afficher la mesure"
+          type="button"
+        >
+          <Icon name="measure" />
+        </button>
+        <button className="tool-button zoom-reset-button" onClick={resetViewer} title="Réinitialiser la vue" type="button">
+          Reset
+        </button>
+        <button
+          className="tool-button export-image-button"
+          disabled={!canExport}
+          onClick={exportAnnotatedImage}
+          title="Exporter l'image annotée"
+          type="button"
+        >
+          PNG
+        </button>
+      </div>
+      <div
+        ref={viewportRef}
+        className={`scan-canvas ${dragEnabled ? "draggable" : ""} ${dragStart ? "dragging" : ""}`}
+        onPointerCancel={handlePointerEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+      >
+        <div
+          className="scan-image-frame"
+          style={{
+            filter: `brightness(${brightness}) contrast(${contrast})`,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
+          }}
+        >
+          {image.status === "analyzed" && isNearViewport ? (
+            <CanvasOverlayViewer canvasRef={annotatedCanvasRef} imageId={image.id} onReady={setCanExport} />
+          ) : image.status === "analyzed" ? (
+            <div className="scan-skeleton" aria-label="Image en attente de chargement optimisé" />
+          ) : (
+            <div className="scan-skeleton" />
+          )}
+          {image.ai_prediction === "PNEUMONIA" && (
+            <div className="scan-annotation">
+              <span>Opacite suspecte</span>
+            </div>
+          )}
+          {measureEnabled && (
+            <div className="scan-measurement" aria-hidden="true">
+              <span>42 mm</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+});
+
+const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }: { image: MedicalImage; user: User }) {
+  const [result, setResult] = useState(image);
+  const severity = getSeverity(result);
+  const confidence = confidencePercent(result);
+
+  useEffect(() => {
+    let mounted = true;
+    getAnalysisResult(image.id)
+      .then((latest) => {
+        if (mounted) setResult(latest);
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [image.id]);
 
   return (
     <article className="diagnostic-result-card">
       <header className="diagnostic-header">
         <div>
           <p className="section-kicker">Diagnostic result</p>
-          <h3>{image.original_filename}</h3>
+          <h3>{result.original_filename}</h3>
         </div>
         <SeverityBadge severity={severity} />
       </header>
@@ -351,33 +762,33 @@ function DiagnosticResultCard({ image, user }: { image: MedicalImage; user: User
         </span>
         <span>
           ID
-          <strong>PFD-{String(image.id).padStart(5, "0")}</strong>
+          <strong>PFD-{String(result.id).padStart(5, "0")}</strong>
         </span>
         <span>
           Date
-          <strong>{formatDate(image.created_at)}</strong>
+          <strong>{formatDate(result.created_at)}</strong>
         </span>
       </div>
 
       <div className="diagnostic-body-grid">
         <div className="diagnostic-findings">
-          {image.ai_error_message && <ClinicalAlert type="warning">{image.ai_error_message}</ClinicalAlert>}
+          {result.ai_error_message && <ClinicalAlert type="warning">{result.ai_error_message}</ClinicalAlert>}
           <ConfidenceBar value={confidence} />
           <div className="finding-list">
             <div>
               <Icon name="activity" />
               <span>Conclusion IA</span>
-              <strong>{predictionLabel(image)}</strong>
+              <strong>{predictionLabel(result)}</strong>
             </div>
             <div>
               <Icon name="shield" />
               <span>Pipeline</span>
-              <strong>{statusLabel(image)}</strong>
+              <strong>{statusLabel(result)}</strong>
             </div>
             <div>
               <Icon name="chart" />
               <span>Performance</span>
-              <strong>{image.ai_latency_ms ? `${image.ai_latency_ms} ms` : "Latence N/R"}</strong>
+              <strong>{result.ai_latency_ms ? `${result.ai_latency_ms} ms` : "Latence N/R"}</strong>
             </div>
             <div>
               <Icon name="patients" />
@@ -386,11 +797,11 @@ function DiagnosticResultCard({ image, user }: { image: MedicalImage; user: User
             </div>
           </div>
         </div>
-        <ScanViewer image={image} />
+        <ScanViewer image={result} />
       </div>
     </article>
   );
-}
+});
 
 function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze: () => void }) {
   if (!images.length) {
@@ -465,6 +876,9 @@ export function DashboardPage({ user, onLogout }: Props) {
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState("");
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [historyExporting, setHistoryExporting] = useState(false);
 
   useEffect(() => {
     function handleRouteChange() {
@@ -487,10 +901,17 @@ export function DashboardPage({ user, onLogout }: Props) {
     }
   }, [activePanel, user.role]);
 
-  const analyzedCount = uploadedImages.filter((image) => image.status === "analyzed").length;
-  const criticalCount = uploadedImages.filter((image) => getSeverity(image) === "Critique").length;
-  const normalCount = uploadedImages.filter((image) => getSeverity(image) === "Normal").length;
-  const latestImage = useMemo(() => uploadedImages[0], [uploadedImages]);
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
+
+  const displayedImages = uploadedImages.length ? uploadedImages : dashboardStats?.recent_analyses ?? [];
+  const analyzedCount = dashboardStats?.analyzed_count ?? displayedImages.filter((image) => image.status === "analyzed").length;
+  const criticalCount = dashboardStats?.critical_count ?? displayedImages.filter((image) => getSeverity(image) === "Critique").length;
+  const normalCount = dashboardStats?.normal_count ?? displayedImages.filter((image) => getSeverity(image) === "Normal").length;
+  const totalExams = dashboardStats?.total_exams ?? displayedImages.length;
+  const recentAnalyses = dashboardStats?.recent_analyses ?? displayedImages.slice(0, 5);
+  const latestImage = useMemo(() => displayedImages[0], [displayedImages]);
 
   function selectFiles(fileList: FileList | null) {
     setError("");
@@ -520,6 +941,7 @@ export function DashboardPage({ user, onLogout }: Props) {
     try {
       const response = await uploadMedicalImages(selectedFiles, setUploadProgress);
       setUploadedImages(response.images);
+      await loadDashboardStats();
       const aiFailures = response.images.filter((image) => image.ai_analysis_status === "failed");
       if (aiFailures.length) {
         setWarning(
@@ -562,12 +984,49 @@ export function DashboardPage({ user, onLogout }: Props) {
     }
   }
 
+  async function loadDashboardStats() {
+    setStatsLoading(true);
+    try {
+      setDashboardStats(await getDashboardStats());
+    } catch {
+      setDashboardStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
+  async function handleHistoryExport() {
+    setHistoryExporting(true);
+    setError("");
+    try {
+      await exportHistoryCsv();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible d'exporter l'historique CSV");
+    } finally {
+      setHistoryExporting(false);
+    }
+  }
+
   function renderOverview() {
     const metrics = [
-      { label: "Examens session", value: uploadedImages.length, trend: "+12%", tone: "positive" },
+      { label: "Examens total", value: totalExams, trend: statsLoading ? "Chargement" : "API", tone: "positive" },
       { label: "Analyses terminees", value: analyzedCount, trend: "Stable", tone: "neutral" },
       { label: "Cas critiques", value: criticalCount, trend: criticalCount ? "A reviser" : "0 alerte", tone: criticalCount ? "critical" : "positive" },
       { label: "Normaux", value: normalCount, trend: "Automatise", tone: "positive" }
+    ];
+    const severityLabels = dashboardStats?.severity_breakdown.map((item) => item.label) ?? ["Normal", "Suspect", "Critical", "Pending"];
+    const severityValues = dashboardStats?.severity_breakdown.map((item) => item.value) ?? [
+      normalCount,
+      displayedImages.filter((image) => getSeverity(image) === "Suspect").length,
+      criticalCount,
+      displayedImages.filter((image) => image.status !== "analyzed").length
+    ];
+    const statusLabels = dashboardStats?.status_breakdown.map((item) => item.label) ?? ["uploaded", "validated", "anonymized", "analyzed"];
+    const statusValues = dashboardStats?.status_breakdown.map((item) => item.value) ?? [
+      displayedImages.filter((image) => image.status === "uploaded").length,
+      displayedImages.filter((image) => image.status === "validated").length,
+      displayedImages.filter((image) => image.status === "anonymized").length,
+      displayedImages.filter((image) => image.status === "analyzed").length
     ];
 
     return (
@@ -583,6 +1042,23 @@ export function DashboardPage({ user, onLogout }: Props) {
             </article>
           ))}
         </section>
+
+        <div className="dashboard-chart-grid">
+          <DashboardChart
+            colors={["#10b981", "#f59e0b", "#ef4444", "#64748b"]}
+            labels={severityLabels}
+            title="Répartition des diagnostics"
+            type="doughnut"
+            values={severityValues}
+          />
+          <DashboardChart
+            colors={["#94a3b8", "#38bdf8", "#14b8a6", "#2563eb", "#f97316"]}
+            labels={statusLabels}
+            title="Statuts du pipeline"
+            type="bar"
+            values={statusValues}
+          />
+        </div>
 
         <section className="clinical-panel overview-profile-panel">
           <div>
@@ -620,7 +1096,7 @@ export function DashboardPage({ user, onLogout }: Props) {
               Voir tout
             </button>
           </div>
-          <PatientTable images={uploadedImages.slice(0, 5)} onAnalyze={() => navigateTo("intake")} />
+          <PatientTable images={recentAnalyses} onAnalyze={() => navigateTo("intake")} />
         </section>
       </div>
     );
@@ -778,7 +1254,13 @@ export function DashboardPage({ user, onLogout }: Props) {
             <p className="section-kicker">Patient list</p>
             <h2>Patients et examens</h2>
           </div>
-          <PatientTable images={uploadedImages} onAnalyze={() => navigateTo("intake")} />
+          <div className="panel-actions-row">
+            <button className="secondary" disabled={historyExporting} onClick={handleHistoryExport} type="button">
+              {historyExporting ? "Export..." : "Exporter CSV"}
+            </button>
+          </div>
+          {error && <ClinicalAlert type="critical">{error}</ClinicalAlert>}
+          <PatientTable images={displayedImages} onAnalyze={() => navigateTo("intake")} />
         </section>
       );
     }

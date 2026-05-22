@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.audit_log import AuditLog
+from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.medical_image import MedicalImage
 from app.models.patient_identity_map import PatientIdentityMap
 from app.services.crypto import decrypt_text
@@ -111,6 +112,28 @@ def test_authenticated_user_can_upload_png_batch(tmp_path, monkeypatch):
     assert stored_path.read_bytes() != png_content
 
 
+def test_authenticated_user_can_read_original_image_for_canvas_overlay(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
+    token = register_and_login()
+    png_content = b"\x89PNG\r\n\x1a\n" + b"scan-data"
+
+    upload_response = client.post(
+        "/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files=[("files", ("scan.png", png_content, "image/png"))],
+    )
+
+    image_id = upload_response.json()["images"][0]["id"]
+    image_response = client.get(
+        f"/upload/{image_id}/image",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert image_response.status_code == 200
+    assert image_response.headers["content-type"] == "image/png"
+    assert image_response.content == png_content
+
+
 def test_upload_reports_ai_model_connection_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
     token = register_and_login()
@@ -138,8 +161,12 @@ def test_upload_reports_ai_model_connection_failure(tmp_path, monkeypatch):
 
     with SessionLocal() as db:
         rows = db.scalars(select(AuditLog).where(AuditLog.action == "ai_prediction_failed")).all()
+        history = db.scalar(select(AnalysisHistory).where(AnalysisHistory.medical_image_id == image["id"]))
 
     assert rows
+    assert history is not None
+    assert history.analysis_status == AnalysisHistoryStatus.failed
+    assert history.error_message == "Connexion au modele IA impossible."
 
 
 def test_authenticated_user_can_upload_valid_dicom(tmp_path, monkeypatch):

@@ -1,0 +1,65 @@
+ID User
+Story Tâche Techno Est.
+(h)
+Restant
+(h) Statut Assigné à
+T-017.1 US-017 Concevoir maquette dashboard Figma 3 ☐ À Faire
+T-017.2 US-017 Créer composant Dashboard React 4 ☐ À Faire
+T-017.3 US-017 Endpoint GET /dashboard/stats FastAPI 3 ☐ À Faire
+T-017.4 US-017 Implémenter graphiques Chart.js 4 ☐ À Faire
+T-017.5 US-017 Liste analyses récentes React 3 ☐ À Faire
+T-017.6 US-017 Optimiser chargement (cache) Redis 2 ☐ À Faire
+T-017.7 US-017 Tester responsive design Test 1 ☐ À Faire
+T-018.1 US-018 Concevoir page résultats Figma 3 ☐ À Faire
+T-018.2 US-018 Composant ImageViewer avec
+zoom
+React 5 ☐ À Faire
+T-018.3 US-018 Superposition heatmap/image Canvas 4 ☐ À Faire
+T-018.4 US-018 Endpoint GET /results/:id FastAPI 3 ☐ À Faire
+T-018.5 US-018 Afficher diagnostic et confiance React 3 ☐ À Faire
+T-018.6 US-018 Indicateur de sévérité CSS/JS 2 ☐ À Faire
+T-018.7 US-018 Bouton export image annotée JS 3 ☐ À Faire
+T-018.8 US-018 Optimiser rendu images React 3 ☐ À Faire
+T-018.9 US-018 Tests interface et performance Test 2 ☐ À Faire
+T-019.1 US-019 Modèle AnalysisHistory SQLAlchemy 2 ☐ À Faire
+T-019.2 US-019 Migration BDD29 Alembic 1 ☐ À Faire
+T-019.3 US-019 Endpoint GET /history avec
+filtres FastAPI 4 ☐ À Faire
+T-019.4 US-019 Pagination serveur FastAPI 2 ☐ À Faire
+T-019.5 US-019 Composant frontend liste React 4 ☐ À Faire
+T-019.6 US-019 Filtres et recherche React 4 ☐ À Faire
+T-019.7 US-019 Export CSV Python/JS 2 ☐ À Faire
+T-019.8 US-019 Tests performances grand volume Test 2 ☐ À Faire
+T-019.9 US-019 Documenter (Chapitre 4.2.3) LaTeX 1 ☐ À Faire
+T-020.1 US-020 Sélectionner librairie PDF Recherche 2 ☐ À Faire
+T-020.2 US-020 Concevoir template rapport HTML/CSS 4 ☐ À Faire
+T-020.3 US-020 Endpoint GET /report/:id/pdf FastAPI 4 ☐ À Faire 
+T-020.4 US-020 Intégrer image et heatmap PDF Python 4 ☐ À Faire
+T-020.5 US-020 En-tête et pied de page Python 2 ☐ À Faire
+T-020.6 US-020 Disclaimer médical obligatoire Text 1 ☐ À Faire
+T-020.7 US-020 Bouton téléchargement frontend React 2 ☐ À Faire
+T-020.8 US-020 Tester qualité PDF généré Test 3 ☐ À Faire
+T-020.9 US-020 Documenter (Chapitre 4.2.3) LaTeX 2 ☐ À Faire
+T-021.1 US-021 Audit responsive des pages DevTools 2 ☐ À Faire
+T-021.2 US-021 CSS Grid/Flexbox responsive CSS 4 ☐ À Faire
+T-021.3 US-021 Menu hamburger mobile React/CSS 3 ☐ À Faire
+T-021.4 US-021 Adapter tableaux et listes CSS 3 ☐ À Faire
+T-021.5 US-021 Optimiser images mobile HTML/JS 2 ☐ À Faire
+T-021.6 US-021 Tester différents devices Test 2 ☐ À Faire
+T-022.1 US-022 Modèle Notification SQLAlchemy 2 ☐ À Faire
+T-022.2 US-022 Migration BDD Alembic 1 ☐ À Faire
+T-022.3 US-022 Endpoint GET/POST
+/notifications FastAPI 3 ☐ À Faire
+T-022.4 US-022 Composant bell icon avec badge React 3 ☐ À Faire
+T-022.5 US-022 Système lecture/non lecture JS 2 ☐ À Faire
+T-022.6 US-022 Tester scénarios notification Test 2 ☐ À Faire
+T-022.7 US-022 Documenter (Chapitre 4.2.5) LaTeX 1 ☐ À Faire
+T-043.1 US-043 Variables d'environnement .env 2 ☐ À Faire
+T-043.2 US-043 Connecter Frontend à API React 4 ☐ À Faire
+T-043.3 US-043 Configurer CORS et sécurité FastAPI 3 ☐ À Faire
+T-043.4 US-043 Intégrer modèle IA dans flux API Python 4 ☐ À Faire
+T-043.5 US-043 Tester flux end-to-end Test 6 ☐ À Faire
+T-043.6 US-043 Gestion erreurs globale Fullstack 4 ☐ À Faire
+T-043.7 US-043 Logs centralisés Logging 3 ☐ À Faire
+T-043.8 US-043 Documenter architecture
+(Chapitre 4) LaTeX 4 ☐ À Faire

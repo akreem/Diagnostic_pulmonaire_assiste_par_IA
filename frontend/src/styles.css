@@ -1825,6 +1825,26 @@ select:focus {
   gap: 24px;
 }
 
+.dashboard-chart-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chart-panel {
+  min-height: 330px;
+}
+
+.chart-canvas-wrap {
+  height: 230px;
+  min-width: 0;
+  position: relative;
+}
+
+.chart-canvas-wrap canvas {
+  max-width: 100%;
+}
+
 .kpi-grid {
   display: grid;
   gap: 16px;
@@ -1912,6 +1932,11 @@ select:focus {
   display: flex;
   gap: 16px;
   justify-content: space-between;
+}
+
+.panel-actions-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .profile-data-grid,
@@ -2137,15 +2162,62 @@ select:focus {
   color: #f8fafc;
 }
 
+.tool-button.active {
+  background: #075985;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.zoom-reset-button {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  font-weight: 700;
+  width: 58px;
+}
+
+.export-image-button {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  font-weight: 800;
+  width: 48px;
+}
+
 .scan-canvas {
   align-items: center;
+  cursor: default;
   display: grid;
   justify-items: center;
   min-height: 280px;
+  overflow: hidden;
   padding: 18px;
   position: relative;
+  touch-action: none;
+  user-select: none;
 }
 
+.scan-canvas.draggable {
+  cursor: grab;
+}
+
+.scan-canvas.dragging {
+  cursor: grabbing;
+}
+
+.scan-image-frame {
+  display: grid;
+  justify-items: center;
+  position: relative;
+  transform-origin: center;
+  transition: filter 140ms ease-out, transform 140ms ease-out;
+  will-change: filter, transform;
+}
+
+.scan-overlay-canvas,
 .gradcam-image {
   border: 1px solid #334155;
   border-radius: 6px;
@@ -2176,6 +2248,48 @@ select:focus {
   top: -24px;
 }
 
+.scan-measurement {
+  border-top: 2px solid #38bdf8;
+  bottom: 20%;
+  color: #e0f2fe;
+  left: 24%;
+  pointer-events: none;
+  position: absolute;
+  width: 52%;
+}
+
+.scan-measurement::before,
+.scan-measurement::after {
+  background: #38bdf8;
+  content: "";
+  height: 14px;
+  position: absolute;
+  top: -8px;
+  width: 2px;
+}
+
+.scan-measurement::before {
+  left: 0;
+}
+
+.scan-measurement::after {
+  right: 0;
+}
+
+.scan-measurement span {
+  background: #075985;
+  border-radius: 4px;
+  font-family: var(--mono-font);
+  font-size: 11px;
+  font-weight: 700;
+  left: 50%;
+  padding: 3px 6px;
+  position: absolute;
+  top: -28px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
 .scan-skeleton,
 .table-skeleton {
   animation: skeleton-pulse 1.4s ease-in-out infinite;
@@ -2187,6 +2301,11 @@ select:focus {
 .scan-skeleton {
   aspect-ratio: 4 / 3;
   width: min(100%, 360px);
+}
+
+.results-stack .diagnostic-result-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 760px;
 }
 
 .table-skeleton {
@@ -2439,7 +2558,8 @@ button.secondary:hover:not(:disabled) {
   }
 
   .diagnostic-body-grid,
-  .admin-grid {
+  .admin-grid,
+  .dashboard-chart-grid {
     grid-template-columns: 1fr;
   }
 }

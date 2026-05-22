@@ -1,8 +1,11 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.medical_image import MedicalImage, MedicalImageStatus
 from app.models.patient_identity_map import PatientIdentityMap
 from app.models.user import User
@@ -15,6 +18,16 @@ from app.services.upload_errors import UploadErrorCode, UploadValidationError, u
 from app.services.upload_storage import encrypt_and_store_upload, validate_upload_file
 
 router = APIRouter()
+
+
+def analysis_severity(prediction: str | None, confidence: float | None, is_ambiguous: bool) -> str | None:
+    if not prediction:
+        return None
+    if prediction == "PNEUMONIA" and (confidence or 0) >= 0.76:
+        return "critical"
+    if prediction == "PNEUMONIA" or is_ambiguous:
+        return "suspect"
+    return "normal"
 
 
 @router.post("", response_model=UploadBatchResponse, status_code=status.HTTP_201_CREATED)
@@ -148,6 +161,31 @@ async def upload_medical_images(
                 patient_mappings.append((image, anonymization_result))
 
         db.flush()
+        for image in images:
+            ai_error_message = getattr(image, "_ai_error_message", None)
+            analysis_status = (
+                AnalysisHistoryStatus.failed
+                if ai_error_message
+                else AnalysisHistoryStatus.completed
+                if image.ai_prediction
+                else AnalysisHistoryStatus.pending
+            )
+            db.add(
+                AnalysisHistory(
+                    owner_user_id=current_user.id,
+                    medical_image_id=image.id,
+                    original_filename=image.original_filename,
+                    analysis_status=analysis_status,
+                    prediction=image.ai_prediction,
+                    confidence=image.ai_confidence,
+                    latency_ms=image.ai_latency_ms,
+                    severity=analysis_severity(image.ai_prediction, image.ai_confidence, image.is_ambiguous),
+                    is_ambiguous=image.is_ambiguous,
+                    error_message=ai_error_message,
+                    gradcam_path=image.ai_gradcam_path,
+                    completed_at=datetime.now(timezone.utc) if analysis_status != AnalysisHistoryStatus.pending else None,
+                )
+            )
         for image, anonymization_result in patient_mappings:
             db.add(
                 PatientIdentityMap(
@@ -204,6 +242,30 @@ async def upload_medical_images(
 
 
 from fastapi.responses import Response
+
+
+@router.get("/{image_id}/image", response_class=Response)
+async def get_medical_image(
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    image = db.query(MedicalImage).filter(
+        MedicalImage.id == image_id,
+        MedicalImage.owner_user_id == current_user.id,
+    ).first()
+
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    try:
+        from app.services.upload_storage import read_encrypted_upload
+
+        image_bytes = read_encrypted_upload(image.storage_path)
+        return Response(content=image_bytes, media_type=image.content_type)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to read encrypted image")
+
 
 @router.get("/{image_id}/gradcam", response_class=Response)
 async def get_gradcam_image(

@@ -36,6 +36,26 @@ export type UploadBatchResponse = {
   images: MedicalImage[];
 };
 
+export type DashboardBreakdownItem = {
+  label: string;
+  value: number;
+};
+
+export type DashboardStats = {
+  total_exams: number;
+  analyzed_count: number;
+  normal_count: number;
+  suspect_count: number;
+  critical_count: number;
+  pending_count: number;
+  ambiguous_count: number;
+  average_confidence?: number | null;
+  average_latency_ms?: number | null;
+  severity_breakdown: DashboardBreakdownItem[];
+  status_breakdown: DashboardBreakdownItem[];
+  recent_analyses: MedicalImage[];
+};
+
 export type SetupStatus = {
   has_admin: boolean;
 };
@@ -59,6 +79,7 @@ const errorTranslations: Record<string, string> = {
   "Invalid authentication token": "Jeton d'authentification invalide",
   "Invalid token subject": "Sujet du jeton invalide",
   "Inactive or missing user": "Utilisateur inactif ou introuvable",
+  "Failed to load medical image": "Impossible de charger l'image médicale",
   "Failed to load Grad-CAM image": "Impossible de charger l'image Grad-CAM"
 };
 
@@ -143,6 +164,36 @@ export function listUsers(): Promise<User[]> {
   return request<User[]>("/auth/users");
 }
 
+export function getDashboardStats(): Promise<DashboardStats> {
+  return request<DashboardStats>("/dashboard/stats");
+}
+
+export function getAnalysisResult(imageId: number): Promise<MedicalImage> {
+  return request<MedicalImage>(`/results/${imageId}`);
+}
+
+export async function exportHistoryCsv(): Promise<void> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/history/export.csv`, { headers });
+  if (!response.ok) {
+    throw new Error(translateError("Request failed"));
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `analysis-history-${date}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function logoutUser(): Promise<void> {
   const token = getToken();
   if (token) {
@@ -193,18 +244,26 @@ export function uploadMedicalImages(
 }
 
 export async function getGradcamImage(imageId: number): Promise<string> {
+  return getProtectedImageObjectUrl(`/upload/${imageId}/gradcam`, "Failed to load Grad-CAM image");
+}
+
+export async function getMedicalImage(imageId: number): Promise<string> {
+  return getProtectedImageObjectUrl(`/upload/${imageId}/image`, "Failed to load medical image");
+}
+
+async function getProtectedImageObjectUrl(path: string, fallbackError: string): Promise<string> {
   const token = getToken();
   const headers = new Headers();
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}/upload/${imageId}/gradcam`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     headers
   });
 
   if (!response.ok) {
-    throw new Error(translateError("Failed to load Grad-CAM image"));
+    throw new Error(translateError(fallbackError));
   }
 
   const blob = await response.blob();

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import audit_logs, auth, health, patient_identities, uploads
+from app.api import audit_logs, auth, dashboard, health, history, patient_identities, results, uploads
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
@@ -27,7 +27,10 @@ def create_app() -> FastAPI:
     application.include_router(health.router)
     application.include_router(auth.router, prefix="/auth", tags=["auth"])
     application.include_router(audit_logs.router, prefix="/audit-logs", tags=["audit"])
+    application.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+    application.include_router(history.router, prefix="/history", tags=["history"])
     application.include_router(patient_identities.router, prefix="/patient-identities", tags=["patient-identities"])
+    application.include_router(results.router, prefix="/results", tags=["results"])
     application.include_router(uploads.router, prefix="/upload", tags=["uploads"])
     return application
 
