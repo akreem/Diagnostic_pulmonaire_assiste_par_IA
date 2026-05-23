@@ -22,3 +22,11 @@ class AnalysisHistoryRead(BaseModel):
     gradcam_path: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
+
+
+class AnalysisHistoryPage(BaseModel):
+    items: list[AnalysisHistoryRead]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

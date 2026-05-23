@@ -1,14 +1,20 @@
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.medical_image import MedicalImage, MedicalImageStatus
 from app.models.user import User
 from app.schemas.dashboard import DashboardBreakdownItem, DashboardStats
+from app.services.cache import cache_client
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+CACHE_KEY_PREFIX = "dashboard:stats:user"
 
 
 def severity_for(image: MedicalImage) -> str:
@@ -21,11 +27,11 @@ def severity_for(image: MedicalImage) -> str:
     return "Normal"
 
 
-@router.get("/stats", response_model=DashboardStats)
-def read_dashboard_stats(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> DashboardStats:
+def dashboard_stats_cache_key(user_id: int) -> str:
+    return f"{CACHE_KEY_PREFIX}:{user_id}"
+
+
+def build_dashboard_stats(current_user: User, db: Session) -> DashboardStats:
     images = list(
         db.scalars(
             select(MedicalImage)
@@ -67,3 +73,21 @@ def read_dashboard_stats(
         ],
         recent_analyses=images[:5],
     )
+
+
+@router.get("/stats", response_model=DashboardStats)
+def read_dashboard_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DashboardStats:
+    cache_key = dashboard_stats_cache_key(current_user.id)
+    cached = cache_client.get_text(cache_key)
+    if cached:
+        try:
+            return DashboardStats.model_validate_json(cached)
+        except Exception:
+            logger.exception("Invalid cached dashboard stats for user %s", current_user.id)
+
+    stats = build_dashboard_stats(current_user, db)
+    cache_client.set_text(cache_key, stats.model_dump_json(), settings.dashboard_cache_ttl_seconds)
+    return stats

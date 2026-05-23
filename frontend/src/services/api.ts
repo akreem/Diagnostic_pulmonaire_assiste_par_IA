@@ -56,6 +56,60 @@ export type DashboardStats = {
   recent_analyses: MedicalImage[];
 };
 
+export type AnalysisHistoryStatus = "pending" | "completed" | "failed";
+
+export type AnalysisHistory = {
+  id: number;
+  owner_user_id: number;
+  medical_image_id: number;
+  original_filename: string;
+  analysis_status: AnalysisHistoryStatus;
+  prediction?: string | null;
+  confidence?: number | null;
+  latency_ms?: number | null;
+  severity?: string | null;
+  is_ambiguous: boolean;
+  error_message?: string | null;
+  gradcam_path?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+};
+
+export type HistoryPage = {
+  items: AnalysisHistory[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
+export type HistoryFilters = {
+  status?: AnalysisHistoryStatus | "";
+  prediction?: string;
+  severity?: string;
+  ambiguous?: boolean | "";
+  search?: string;
+  page?: number;
+  page_size?: number;
+};
+
+export type AppNotification = {
+  id: number;
+  owner_user_id: number;
+  title: string;
+  message: string;
+  category: "info" | "success" | "warning" | "critical" | string;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  is_read: boolean;
+  created_at: string;
+  read_at?: string | null;
+};
+
+export type NotificationPreference = {
+  notifications_enabled: boolean;
+};
+
 export type SetupStatus = {
   has_admin: boolean;
 };
@@ -172,14 +226,57 @@ export function getAnalysisResult(imageId: number): Promise<MedicalImage> {
   return request<MedicalImage>(`/results/${imageId}`);
 }
 
-export async function exportHistoryCsv(): Promise<void> {
+function historyQueryString(filters: HistoryFilters = {}): string {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === "") return;
+    params.set(key, String(value));
+  });
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+export function listAnalysisHistory(filters: HistoryFilters = {}): Promise<HistoryPage> {
+  return request<HistoryPage>(`/history${historyQueryString(filters)}`);
+}
+
+export function listNotifications(options: { unread_only?: boolean; limit?: number; offset?: number } = {}): Promise<AppNotification[]> {
+  const params = new URLSearchParams();
+  Object.entries(options).forEach(([key, value]) => {
+    if (value === undefined) return;
+    params.set(key, String(value));
+  });
+  const query = params.toString();
+  return request<AppNotification[]>(`/notifications${query ? `?${query}` : ""}`);
+}
+
+export function getNotificationPreference(): Promise<NotificationPreference> {
+  return request<NotificationPreference>("/notifications/preferences");
+}
+
+export function updateNotificationPreference(notificationsEnabled: boolean): Promise<NotificationPreference> {
+  return request<NotificationPreference>("/notifications/preferences", {
+    method: "PUT",
+    body: JSON.stringify({ notifications_enabled: notificationsEnabled })
+  });
+}
+
+export function markNotificationRead(notificationId: number): Promise<AppNotification> {
+  return request<AppNotification>(`/notifications/${notificationId}/read`, { method: "PATCH" });
+}
+
+export function markNotificationUnread(notificationId: number): Promise<AppNotification> {
+  return request<AppNotification>(`/notifications/${notificationId}/unread`, { method: "PATCH" });
+}
+
+export async function exportHistoryCsv(filters: HistoryFilters = {}): Promise<void> {
   const token = getToken();
   const headers = new Headers();
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}/history/export.csv`, { headers });
+  const response = await fetch(`${API_BASE_URL}/history/export.csv${historyQueryString(filters)}`, { headers });
   if (!response.ok) {
     throw new Error(translateError("Request failed"));
   }
@@ -190,6 +287,28 @@ export async function exportHistoryCsv(): Promise<void> {
   const date = new Date().toISOString().slice(0, 10);
   link.href = url;
   link.download = `analysis-history-${date}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadReportPdf(imageId: number, filenameSeed: string): Promise<void> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/report/${imageId}/pdf`, { headers });
+  if (!response.ok) {
+    throw new Error(translateError("Request failed"));
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const safeName = filenameSeed.replace(/\.[^.]+$/, "").replace(/[^a-z0-9_-]+/gi, "-").toLowerCase();
+  link.href = url;
+  link.download = `${safeName || "analysis"}-report.pdf`;
   link.click();
   URL.revokeObjectURL(url);
 }

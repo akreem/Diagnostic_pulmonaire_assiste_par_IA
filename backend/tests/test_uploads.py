@@ -13,11 +13,27 @@ from app.main import app
 from app.models.audit_log import AuditLog
 from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.medical_image import MedicalImage
+from app.models.notification import Notification
 from app.models.patient_identity_map import PatientIdentityMap
+from app.api.dashboard import dashboard_stats_cache_key
 from app.services.crypto import decrypt_text
 from app.services.upload_storage import read_encrypted_upload
 
 client = TestClient(app)
+
+
+class FakeCache:
+    def __init__(self):
+        self.deleted_keys: list[str] = []
+
+    def get_text(self, _key: str) -> str | None:
+        return None
+
+    def set_text(self, _key: str, _value: str, _ttl_seconds: int) -> None:
+        return None
+
+    def delete(self, key: str) -> None:
+        self.deleted_keys.append(key)
 
 
 def error_code(response) -> str:
@@ -112,6 +128,24 @@ def test_authenticated_user_can_upload_png_batch(tmp_path, monkeypatch):
     assert stored_path.read_bytes() != png_content
 
 
+def test_upload_invalidates_dashboard_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
+    fake_cache = FakeCache()
+    monkeypatch.setattr("app.api.uploads.cache_client", fake_cache)
+    token = register_and_login()
+    user = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).json()
+    png_content = b"\x89PNG\r\n\x1a\n" + b"scan-data"
+
+    response = client.post(
+        "/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files=[("files", ("scan.png", png_content, "image/png"))],
+    )
+
+    assert response.status_code == 201
+    assert fake_cache.deleted_keys == [dashboard_stats_cache_key(user["id"])]
+
+
 def test_authenticated_user_can_read_original_image_for_canvas_overlay(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
     token = register_and_login()
@@ -167,6 +201,72 @@ def test_upload_reports_ai_model_connection_failure(tmp_path, monkeypatch):
     assert history is not None
     assert history.analysis_status == AnalysisHistoryStatus.failed
     assert history.error_message == "Connexion au modele IA impossible."
+
+
+def test_upload_creates_critical_notification_for_high_confidence_pneumonia(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
+    token = register_and_login()
+    png_content = b"\x89PNG\r\n\x1a\n" + b"scan-data"
+
+    async def critical_prediction(_filename: str, _content: bytes, _threshold: float = 0.5):
+        return {"prediction": "PNEUMONIA", "confidence": 0.91, "latency_ms": 88}
+
+    async def no_gradcam(_filename: str, _content: bytes):
+        return {}
+
+    monkeypatch.setattr("app.services.ai_client.ai_client.predict", critical_prediction)
+    monkeypatch.setattr("app.services.ai_client.ai_client.get_gradcam", no_gradcam)
+
+    response = client.post(
+        "/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files=[("files", ("critical.png", png_content, "image/png"))],
+    )
+
+    assert response.status_code == 201
+    image = response.json()["images"][0]
+
+    with SessionLocal() as db:
+        notification = db.scalar(select(Notification).where(Notification.resource_id == str(image["id"])))
+
+    assert notification is not None
+    assert notification.category == "critical"
+    assert notification.is_read is False
+    assert notification.resource_type == "medical_image"
+
+
+def test_upload_skips_critical_notification_when_disabled(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "upload_storage_dir", str(tmp_path))
+    token = register_and_login()
+    png_content = b"\x89PNG\r\n\x1a\n" + b"scan-data"
+
+    async def critical_prediction(_filename: str, _content: bytes, _threshold: float = 0.5):
+        return {"prediction": "PNEUMONIA", "confidence": 0.91, "latency_ms": 88}
+
+    async def no_gradcam(_filename: str, _content: bytes):
+        return {}
+
+    monkeypatch.setattr("app.services.ai_client.ai_client.predict", critical_prediction)
+    monkeypatch.setattr("app.services.ai_client.ai_client.get_gradcam", no_gradcam)
+    client.put(
+        "/notifications/preferences",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"notifications_enabled": False},
+    )
+
+    response = client.post(
+        "/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files=[("files", ("critical-muted.png", png_content, "image/png"))],
+    )
+
+    assert response.status_code == 201
+    image = response.json()["images"][0]
+
+    with SessionLocal() as db:
+        notification = db.scalar(select(Notification).where(Notification.resource_id == str(image["id"])))
+
+    assert notification is None
 
 
 def test_authenticated_user_can_upload_valid_dicom(tmp_path, monkeypatch):

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     upload_max_file_size_bytes: int = 50 * 1024 * 1024
     upload_storage_dir: str = "storage/uploads"
     model_service_url: str = "http://localhost:8001"
+    log_level: str = "INFO"
+    log_file_path: str = "storage/logs/backend.jsonl"
+    redis_url: str = ""
+    dashboard_cache_ttl_seconds: int = 60
 
     @cached_property
     def cors_origins(self) -> list[str]:

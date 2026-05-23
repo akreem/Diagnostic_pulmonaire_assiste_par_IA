@@ -4,14 +4,26 @@ import type { Chart as ChartInstance, ChartType } from "chart.js";
 
 import { RegisterPage } from "./RegisterPage";
 import {
+  AnalysisHistory,
+  AppNotification,
   DashboardStats,
+  downloadReportPdf,
   exportHistoryCsv,
   getAnalysisResult,
   getDashboardStats,
   getGradcamImage,
   getMedicalImage,
+  getNotificationPreference,
+  HistoryFilters,
+  HistoryPage,
+  listAnalysisHistory,
+  listNotifications,
   listUsers,
+  markNotificationRead,
+  markNotificationUnread,
   MedicalImage,
+  NotificationPreference,
+  updateNotificationPreference,
   uploadMedicalImages,
   User
 } from "../services/api";
@@ -48,7 +60,7 @@ type Severity = "Normal" | "Suspect" | "Critique";
 
 const dashboardRoutes: Record<PanelId, string> = {
   overview: "/dashboard",
-  patients: "/patients",
+  patients: "/historique",
   intake: "/analyses",
   results: "/resultats",
   admin: "/parametres"
@@ -56,16 +68,16 @@ const dashboardRoutes: Record<PanelId, string> = {
 
 const legacyRoutes: Record<string, PanelId> = {
   "/import-analyse": "intake",
-  "/historique": "patients",
+  "/patients": "patients",
   "/gestion-utilisateurs": "admin",
   "/utilisateurs": "admin"
 };
 
 const dashboardPages: Array<{ id: PanelId; title: string; icon: IconName; adminOnly?: boolean }> = [
   { id: "overview", title: "Dashboard", icon: "dashboard" },
-  { id: "patients", title: "Patients", icon: "patients" },
   { id: "intake", title: "Analyses", icon: "analysis" },
   { id: "results", title: "Reports", icon: "fileText" },
+  { id: "patients", title: "Historique des analyses", icon: "patients" },
   { id: "admin", title: "Settings", icon: "settings", adminOnly: true }
 ];
 
@@ -726,6 +738,8 @@ const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) 
 
 const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }: { image: MedicalImage; user: User }) {
   const [result, setResult] = useState(image);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
   const severity = getSeverity(result);
   const confidence = confidencePercent(result);
 
@@ -741,6 +755,18 @@ const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }:
     };
   }, [image.id]);
 
+  async function handlePdfDownload() {
+    setPdfDownloading(true);
+    setPdfError("");
+    try {
+      await downloadReportPdf(result.id, result.original_filename);
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : "Impossible de telecharger le rapport PDF");
+    } finally {
+      setPdfDownloading(false);
+    }
+  }
+
   return (
     <article className="diagnostic-result-card">
       <header className="diagnostic-header">
@@ -748,16 +774,21 @@ const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }:
           <p className="section-kicker">Diagnostic result</p>
           <h3>{result.original_filename}</h3>
         </div>
-        <SeverityBadge severity={severity} />
+        <div className="diagnostic-header-actions">
+          <SeverityBadge severity={severity} />
+          <button className="secondary" disabled={pdfDownloading} onClick={handlePdfDownload} type="button">
+            {pdfDownloading ? "PDF..." : "PDF"}
+          </button>
+        </div>
       </header>
 
       <div className="patient-info-row">
         <span>
-          Patient
-          <strong>Patient anonymise</strong>
+          Analyse
+          <strong>Examen anonymise</strong>
         </span>
         <span>
-          Age
+          Source
           <strong>N/R</strong>
         </span>
         <span>
@@ -772,6 +803,7 @@ const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }:
 
       <div className="diagnostic-body-grid">
         <div className="diagnostic-findings">
+          {pdfError && <ClinicalAlert type="critical">{pdfError}</ClinicalAlert>}
           {result.ai_error_message && <ClinicalAlert type="warning">{result.ai_error_message}</ClinicalAlert>}
           <ConfidenceBar value={confidence} />
           <div className="finding-list">
@@ -808,8 +840,8 @@ function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze
     return (
       <div className="empty-state clinical-empty-state">
         <Icon name="patients" />
-        <strong>Aucun patient dans la session</strong>
-        <small>Importez une image medicale pour creer une ligne patient anonymisee.</small>
+        <strong>Aucune analyse dans la session</strong>
+        <small>Importez une image medicale pour creer une ligne d'analyse.</small>
         <button onClick={onAnalyze} type="button">
           <Icon name="plus" />
           Nouvelle analyse
@@ -824,7 +856,7 @@ function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze
         <thead>
           <tr>
             <th>
-              Patient ID <Icon name="chevronDown" />
+              Analyse ID <Icon name="chevronDown" />
             </th>
             <th>
               Examen <Icon name="chevronDown" />
@@ -864,6 +896,137 @@ function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze
   );
 }
 
+function historyStatusLabel(status: AnalysisHistory["analysis_status"]) {
+  const labels: Record<AnalysisHistory["analysis_status"], string> = {
+    pending: "En attente",
+    completed: "Terminee",
+    failed: "Echouee"
+  };
+  return labels[status];
+}
+
+function HistoryTable({ page }: { page: HistoryPage | null }) {
+  const items = page?.items ?? [];
+  if (!items.length) {
+    return (
+      <div className="empty-state clinical-empty-state">
+        <Icon name="patients" />
+        <strong>Aucun historique disponible</strong>
+        <small>Les analyses terminees apparaitront ici avec leurs metadonnees.</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="clinical-table-wrap">
+      <table className="clinical-table">
+        <thead>
+          <tr>
+            <th>Analyse</th>
+            <th>Date</th>
+            <th>Statut</th>
+            <th>Diagnostic</th>
+            <th>Confiance</th>
+            <th>Severite</th>
+            <th>Ambigu</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr key={item.id}>
+              <td>{item.original_filename}</td>
+              <td>{formatDate(item.created_at)}</td>
+              <td>
+                <span className={`status-pill ${item.analysis_status === "failed" ? "warning" : item.analysis_status === "completed" ? "active" : "inactive"}`}>
+                  {historyStatusLabel(item.analysis_status)}
+                </span>
+              </td>
+              <td>{item.prediction ?? "N/R"}</td>
+              <td className="mono">{item.confidence != null ? `${Math.round(item.confidence * 100)}%` : "N/R"}</td>
+              <td>{item.severity ?? "N/R"}</td>
+              <td>{item.is_ambiguous ? "Oui" : "Non"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function NotificationCenter({
+  notifications,
+  preference,
+  open,
+  loading,
+  onToggleOpen,
+  onToggleRead,
+  onTogglePreference,
+  onRefresh
+}: {
+  notifications: AppNotification[];
+  preference: NotificationPreference | null;
+  open: boolean;
+  loading: boolean;
+  onToggleOpen: () => void;
+  onToggleRead: (notification: AppNotification) => void;
+  onTogglePreference: () => void;
+  onRefresh: () => void;
+}) {
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+
+  return (
+    <div className="notification-center">
+      <button className="icon-button notification-bell-button" aria-label="Notifications" onClick={onToggleOpen} type="button">
+        <Icon name="bell" />
+        {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+      </button>
+
+      {open && (
+        <section className="notification-popover" aria-label="Historique des notifications">
+          <div className="notification-popover-header">
+            <div>
+              <p className="section-kicker">Notifications</p>
+              <h2>Historique</h2>
+            </div>
+            <button className="secondary" onClick={onRefresh} type="button">
+              Actualiser
+            </button>
+          </div>
+
+          <label className="notification-toggle">
+            <input checked={preference?.notifications_enabled ?? true} onChange={onTogglePreference} type="checkbox" />
+            Notifications actives
+          </label>
+
+          <div className="notification-list">
+            {loading ? (
+              <div className="table-skeleton" />
+            ) : notifications.length ? (
+              notifications.map((notification) => (
+                <article className={`notification-item ${notification.category} ${notification.is_read ? "read" : "unread"}`} key={notification.id}>
+                  <div>
+                    <strong>{notification.title}</strong>
+                    <small>{formatDate(notification.created_at)}</small>
+                  </div>
+                  <p>{notification.message}</p>
+                  <button className="secondary" onClick={() => onToggleRead(notification)} type="button">
+                    {notification.is_read ? "Non lu" : "Lu"}
+                  </button>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state clinical-empty-state notification-empty-state">
+                <Icon name="bell" />
+                <strong>Aucune notification</strong>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 export function DashboardPage({ user, onLogout }: Props) {
   const [activePanel, setActivePanel] = useState<PanelId>(() => routeToPanel(window.location.pathname));
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -879,6 +1042,14 @@ export function DashboardPage({ user, onLogout }: Props) {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [historyExporting, setHistoryExporting] = useState(false);
+  const [historyFilters, setHistoryFilters] = useState<HistoryFilters>({ page: 1, page_size: 20 });
+  const [historyPage, setHistoryPage] = useState<HistoryPage | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationPreference, setNotificationPreference] = useState<NotificationPreference | null>(null);
 
   useEffect(() => {
     function handleRouteChange() {
@@ -903,7 +1074,15 @@ export function DashboardPage({ user, onLogout }: Props) {
 
   useEffect(() => {
     loadDashboardStats();
+    loadNotifications();
+    loadNotificationPreference();
   }, []);
+
+  useEffect(() => {
+    if (activePanel === "patients") {
+      loadHistory();
+    }
+  }, [activePanel, historyFilters]);
 
   const displayedImages = uploadedImages.length ? uploadedImages : dashboardStats?.recent_analyses ?? [];
   const analyzedCount = dashboardStats?.analyzed_count ?? displayedImages.filter((image) => image.status === "analyzed").length;
@@ -942,6 +1121,7 @@ export function DashboardPage({ user, onLogout }: Props) {
       const response = await uploadMedicalImages(selectedFiles, setUploadProgress);
       setUploadedImages(response.images);
       await loadDashboardStats();
+      await loadNotifications();
       const aiFailures = response.images.filter((image) => image.ai_analysis_status === "failed");
       if (aiFailures.length) {
         setWarning(
@@ -995,11 +1175,60 @@ export function DashboardPage({ user, onLogout }: Props) {
     }
   }
 
+  async function loadHistory() {
+    setHistoryLoading(true);
+    setHistoryError("");
+    try {
+      setHistoryPage(await listAnalysisHistory(historyFilters));
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : "Impossible de charger l'historique");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function loadNotifications() {
+    setNotificationsLoading(true);
+    try {
+      setNotifications(await listNotifications({ limit: 20 }));
+    } catch {
+      setNotifications([]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }
+
+  async function loadNotificationPreference() {
+    try {
+      setNotificationPreference(await getNotificationPreference());
+    } catch {
+      setNotificationPreference({ notifications_enabled: true });
+    }
+  }
+
+  async function handleNotificationReadToggle(notification: AppNotification) {
+    const updated = notification.is_read ? await markNotificationUnread(notification.id) : await markNotificationRead(notification.id);
+    setNotifications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  }
+
+  async function handleNotificationPreferenceToggle() {
+    const nextValue = !(notificationPreference?.notifications_enabled ?? true);
+    setNotificationPreference(await updateNotificationPreference(nextValue));
+  }
+
+  function updateHistoryFilters(patch: HistoryFilters) {
+    setHistoryFilters((current) => ({ ...current, ...patch, page: 1 }));
+  }
+
+  function setHistoryPageNumber(page: number) {
+    setHistoryFilters((current) => ({ ...current, page }));
+  }
+
   async function handleHistoryExport() {
     setHistoryExporting(true);
     setError("");
     try {
-      await exportHistoryCsv();
+      await exportHistoryCsv(historyFilters);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible d'exporter l'historique CSV");
     } finally {
@@ -1089,8 +1318,8 @@ export function DashboardPage({ user, onLogout }: Props) {
         <section className="clinical-panel">
           <div className="panel-heading-row">
             <div>
-              <p className="section-kicker">Patient list</p>
-              <h2>Patients recents</h2>
+              <p className="section-kicker">Analysis history</p>
+              <h2>Analyses recentes</h2>
             </div>
             <button className="secondary" onClick={() => navigateTo("patients")} type="button">
               Voir tout
@@ -1250,17 +1479,87 @@ export function DashboardPage({ user, onLogout }: Props) {
     if (panel === "patients") {
       return (
         <section className="clinical-panel">
-          <div>
-            <p className="section-kicker">Patient list</p>
-            <h2>Patients et examens</h2>
-          </div>
-          <div className="panel-actions-row">
+          <div className="panel-heading-row">
+            <div>
+              <p className="section-kicker">Analysis history</p>
+              <h2>Historique des analyses</h2>
+            </div>
             <button className="secondary" disabled={historyExporting} onClick={handleHistoryExport} type="button">
               {historyExporting ? "Export..." : "Exporter CSV"}
             </button>
           </div>
+          <div className="history-filters">
+            <input
+              aria-label="Recherche historique"
+              onChange={(event) => updateHistoryFilters({ search: event.target.value })}
+              placeholder="Rechercher fichier"
+              type="search"
+              value={historyFilters.search ?? ""}
+            />
+            <select
+              aria-label="Filtrer par statut"
+              onChange={(event) => updateHistoryFilters({ status: event.target.value as HistoryFilters["status"] })}
+              value={historyFilters.status ?? ""}
+            >
+              <option value="">Tous statuts</option>
+              <option value="completed">Terminees</option>
+              <option value="pending">En attente</option>
+              <option value="failed">Echouees</option>
+            </select>
+            <select
+              aria-label="Filtrer par diagnostic"
+              onChange={(event) => updateHistoryFilters({ prediction: event.target.value })}
+              value={historyFilters.prediction ?? ""}
+            >
+              <option value="">Tous diagnostics</option>
+              <option value="PNEUMONIA">Pneumonie</option>
+              <option value="NORMAL">Normal</option>
+            </select>
+            <select
+              aria-label="Filtrer par severite"
+              onChange={(event) => updateHistoryFilters({ severity: event.target.value })}
+              value={historyFilters.severity ?? ""}
+            >
+              <option value="">Toutes severites</option>
+              <option value="critical">Critique</option>
+              <option value="suspect">Suspect</option>
+              <option value="normal">Normal</option>
+            </select>
+            <label className="history-checkbox">
+              <input
+                checked={historyFilters.ambiguous === true}
+                onChange={(event) => updateHistoryFilters({ ambiguous: event.target.checked ? true : "" })}
+                type="checkbox"
+              />
+              Ambigus
+            </label>
+          </div>
           {error && <ClinicalAlert type="critical">{error}</ClinicalAlert>}
-          <PatientTable images={displayedImages} onAnalyze={() => navigateTo("intake")} />
+          {historyError && <ClinicalAlert type="critical">{historyError}</ClinicalAlert>}
+          {historyLoading ? <div className="table-skeleton" /> : <HistoryTable page={historyPage} />}
+          <div className="history-pagination">
+            <span className="mono">
+              Page {historyPage?.page ?? historyFilters.page ?? 1} / {historyPage?.total_pages ?? 0}
+            </span>
+            <div>
+              <button
+                className="secondary"
+                disabled={!historyPage || historyPage.page <= 1}
+                onClick={() => setHistoryPageNumber((historyPage?.page ?? 1) - 1)}
+                type="button"
+              >
+                Prec.
+              </button>
+              <button
+                className="secondary"
+                disabled={!historyPage || historyPage.page >= historyPage.total_pages}
+                onClick={() => setHistoryPageNumber((historyPage?.page ?? 1) + 1)}
+                type="button"
+              >
+                Suiv.
+              </button>
+            </div>
+          </div>
         </section>
       );
     }
@@ -1272,7 +1571,7 @@ export function DashboardPage({ user, onLogout }: Props) {
   const visiblePages = dashboardPages.filter((page) => !page.adminOnly || user.role === "admin");
   const activePage = visiblePages.find((page) => page.id === activePanel) ?? visiblePages[0];
   const userInitial = user.full_name.trim().charAt(0).toUpperCase() || "U";
-  const patientBadge = latestImage ? `PFD-${String(latestImage.id).padStart(5, "0")}` : "Aucun patient";
+  const patientBadge = latestImage ? `PFD-${String(latestImage.id).padStart(5, "0")}` : "Aucune analyse";
 
   return (
     <main className="clinical-shell">
@@ -1322,9 +1621,16 @@ export function DashboardPage({ user, onLogout }: Props) {
 
           <div className="clinical-top-actions">
             <span className="patient-id-badge">{patientBadge}</span>
-            <button className="icon-button" aria-label="Notifications" type="button">
-              <Icon name="bell" />
-            </button>
+            <NotificationCenter
+              loading={notificationsLoading}
+              notifications={notifications}
+              onRefresh={loadNotifications}
+              onToggleOpen={() => setNotificationsOpen((current) => !current)}
+              onTogglePreference={handleNotificationPreferenceToggle}
+              onToggleRead={handleNotificationReadToggle}
+              open={notificationsOpen}
+              preference={notificationPreference}
+            />
             <span className="doctor-avatar" aria-label={`Docteur ${user.full_name}`}>
               {userInitial}
             </span>

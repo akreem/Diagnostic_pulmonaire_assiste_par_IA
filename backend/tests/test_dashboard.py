@@ -3,10 +3,25 @@ from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
+from app.api import dashboard as dashboard_api
 from app.main import app
 from app.models.medical_image import MedicalImage, MedicalImageStatus
 
 client = TestClient(app)
+
+
+class FakeCache:
+    def __init__(self):
+        self.values: dict[str, str] = {}
+
+    def get_text(self, key: str) -> str | None:
+        return self.values.get(key)
+
+    def set_text(self, key: str, value: str, _ttl_seconds: int) -> None:
+        self.values[key] = value
+
+    def delete(self, key: str) -> None:
+        self.values.pop(key, None)
 
 
 def create_token(email: str = "stats@example.com") -> str:
@@ -88,3 +103,21 @@ def test_dashboard_stats_summarizes_current_user_images():
     assert payload["average_confidence"] == 0.895
     assert payload["average_latency_ms"] == 150.0
     assert payload["recent_analyses"][0]["original_filename"] == "critical.png"
+
+
+def test_dashboard_stats_uses_cache(monkeypatch):
+    fake_cache = FakeCache()
+    monkeypatch.setattr(dashboard_api, "cache_client", fake_cache)
+    token = create_token("stats-cache@example.com")
+    current_user = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).json()
+
+    add_image(current_user["id"], "cached-first.png")
+    first_response = client.get("/dashboard/stats", headers={"Authorization": f"Bearer {token}"})
+    add_image(current_user["id"], "cached-second.png")
+    second_response = client.get("/dashboard/stats", headers={"Authorization": f"Bearer {token}"})
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.json()["total_exams"] == 1
+    assert second_response.json()["total_exams"] == 1
+    assert dashboard_api.dashboard_stats_cache_key(current_user["id"]) in fake_cache.values

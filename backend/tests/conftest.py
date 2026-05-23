@@ -3,6 +3,7 @@ import os
 import pytest
 
 os.environ["DATABASE_URL"] = os.environ.get("PYTEST_DATABASE_URL", "sqlite:///./.pytest.db")
+os.environ["REDIS_URL"] = ""
 
 from app.db.base import Base
 from app.db.session import engine

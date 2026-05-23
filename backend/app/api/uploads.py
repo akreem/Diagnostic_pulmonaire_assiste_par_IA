@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -7,10 +8,13 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.medical_image import MedicalImage, MedicalImageStatus
+from app.models.notification import Notification
 from app.models.patient_identity_map import PatientIdentityMap
 from app.models.user import User
 from app.schemas.upload import UploadBatchResponse
+from app.api.dashboard import dashboard_stats_cache_key
 from app.services.audit import write_audit_log
+from app.services.cache import cache_client
 from app.services.crypto import encrypt_text
 from app.services.dicom_anonymization import DicomAnonymizationResult, anonymize_dicom_content
 from app.services.medical_file_validation import MedicalFileValidationError, validate_medical_file_content
@@ -18,6 +22,7 @@ from app.services.upload_errors import UploadErrorCode, UploadValidationError, u
 from app.services.upload_storage import encrypt_and_store_upload, validate_upload_file
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def analysis_severity(prediction: str | None, confidence: float | None, is_ambiguous: bool) -> str | None:
@@ -120,10 +125,7 @@ async def upload_medical_images(
                         stored_gradcam = encrypt_and_store_upload(gradcam_bytes, ".png")
                         ai_gradcam_path = stored_gradcam.storage_path
                 except Exception as e:
-                    import traceback
-                    print(f"GRADCAM ERROR: {e}")
-                    traceback.print_exc()
-                    pass
+                    logger.exception("Grad-CAM generation failed for %s", safe_name)
 
             except AIServiceError as e:
                 ai_error_message = str(e)
@@ -163,6 +165,7 @@ async def upload_medical_images(
         db.flush()
         for image in images:
             ai_error_message = getattr(image, "_ai_error_message", None)
+            severity = analysis_severity(image.ai_prediction, image.ai_confidence, image.is_ambiguous)
             analysis_status = (
                 AnalysisHistoryStatus.failed
                 if ai_error_message
@@ -179,13 +182,25 @@ async def upload_medical_images(
                     prediction=image.ai_prediction,
                     confidence=image.ai_confidence,
                     latency_ms=image.ai_latency_ms,
-                    severity=analysis_severity(image.ai_prediction, image.ai_confidence, image.is_ambiguous),
+                    severity=severity,
                     is_ambiguous=image.is_ambiguous,
                     error_message=ai_error_message,
                     gradcam_path=image.ai_gradcam_path,
                     completed_at=datetime.now(timezone.utc) if analysis_status != AnalysisHistoryStatus.pending else None,
                 )
             )
+            if severity == "critical" and current_user.notifications_enabled:
+                confidence_percent = round((image.ai_confidence or 0) * 100)
+                db.add(
+                    Notification(
+                        owner_user_id=current_user.id,
+                        title="Cas critique detecte",
+                        message=f"{image.original_filename} presente une suspicion de pneumonie avec {confidence_percent}% de confiance.",
+                        category="critical",
+                        resource_type="medical_image",
+                        resource_id=str(image.id),
+                    )
+                )
         for image, anonymization_result in patient_mappings:
             db.add(
                 PatientIdentityMap(
@@ -196,6 +211,7 @@ async def upload_medical_images(
                 )
             )
         db.commit()
+        cache_client.delete(dashboard_stats_cache_key(current_user.id))
     except Exception as exc:
         db.rollback()
         write_audit_log(

@@ -1,10 +1,12 @@
 import csv
+import math
 from datetime import datetime
 from io import StringIO
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy import Select
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.user import User
-from app.schemas.history import AnalysisHistoryRead
+from app.schemas.history import AnalysisHistoryPage
 
 router = APIRouter()
 
@@ -117,7 +119,7 @@ def export_analysis_history_csv(
     )
 
 
-@router.get("", response_model=list[AnalysisHistoryRead])
+@router.get("", response_model=AnalysisHistoryPage)
 def list_analysis_history(
     status: AnalysisHistoryStatus | None = Query(default=None),
     prediction: str | None = Query(default=None),
@@ -126,9 +128,11 @@ def list_analysis_history(
     search: str | None = Query(default=None),
     date_from: datetime | None = Query(default=None),
     date_to: datetime | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[AnalysisHistory]:
+) -> AnalysisHistoryPage:
     query = build_history_query(
         current_user,
         status,
@@ -139,4 +143,12 @@ def list_analysis_history(
         date_from,
         date_to,
     )
-    return list(db.scalars(query).all())
+    total = db.scalar(select(func.count()).select_from(query.order_by(None).subquery())) or 0
+    items = list(db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all())
+    return AnalysisHistoryPage(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total else 0,
+    )

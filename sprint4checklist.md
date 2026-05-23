@@ -25,7 +25,7 @@ Checklist updated from current code review: backend/frontend implementation alre
 | [x] | T-017.3 | Endpoint GET `/dashboard/stats` | FastAPI | 3h | Added authenticated dashboard stats endpoint with KPIs, severity/status breakdowns, and recent analyses |
 | [x] | T-017.4 | Implémenter graphiques | Chart.js | 4h | Added Chart.js dependency and dashboard doughnut/bar charts fed by `/dashboard/stats` |
 | [x] | T-017.5 | Liste analyses récentes | React | 3h | Dashboard recent analyses list now uses persisted `recent_analyses` from `/dashboard/stats` |
-| [ ] | T-017.6 | Optimiser chargement avec cache | Redis | 2h | Planned |
+| [x] | T-017.6 | Optimiser chargement avec cache | Redis | 2h | Added Redis-backed `/dashboard/stats` cache with per-user keys, TTL, upload invalidation, Docker Redis service, and tests |
 | [~] | T-017.7 | Tester responsive design | Test | 1h | Responsive CSS exists; automated/device test evidence not found |
 
 ## US-018 - Résultats d'Analyse
@@ -49,9 +49,9 @@ Checklist updated from current code review: backend/frontend implementation alre
 | [x] | T-019.1 | Modèle AnalysisHistory | SQLAlchemy | 2h | Added separate `AnalysisHistory` SQLAlchemy model for persisted result history metadata |
 | [x] | T-019.2 | Migration BDD | Alembic | 1h | Added Alembic migration creating `analysis_history` table, enum, indexes, and foreign keys |
 | [x] | T-019.3 | Endpoint GET `/history` avec filtres | FastAPI | 4h | Added authenticated history endpoint with status, prediction, severity, ambiguous, search, and date filters |
-| [ ] | T-019.4 | Pagination serveur | FastAPI | 2h | Planned |
-| [~] | T-019.5 | Composant frontend liste | React | 4h | `PatientTable` lists session analyses; no persisted history page/API yet |
-| [ ] | T-019.6 | Filtres et recherche | React | 4h | Planned |
+| [x] | T-019.4 | Pagination serveur | FastAPI | 2h | `/history` now returns paginated server-side results with total, page, page size, and total pages |
+| [x] | T-019.5 | Composant frontend liste | React | 4h | Added persisted history table backed by `/history` instead of session-only analysis rows |
+| [x] | T-019.6 | Filtres et recherche | React | 4h | Added search, status, prediction, severity, ambiguous filters, and pagination controls |
 | [x] | T-019.7 | Export CSV | Python/JS | 2h | Added `/history/export.csv` backend export and frontend CSV download button |
 | [ ] | T-019.8 | Tests performances grand volume | Test | 2h | Planned |
 | [ ] | T-019.9 | Documenter Chapitre 4.2.3 | LaTeX | 1h | Planned |
@@ -60,13 +60,13 @@ Checklist updated from current code review: backend/frontend implementation alre
 
 | Status | ID | Task | Tech | Estimate | Notes |
 | --- | --- | --- | --- | ---: | --- |
-| [ ] | T-020.1 | Sélectionner librairie PDF | Recherche | 2h | Planned |
-| [ ] | T-020.2 | Concevoir template rapport | HTML/CSS | 4h | Planned |
-| [ ] | T-020.3 | Endpoint GET `/report/:id/pdf` | FastAPI | 4h | Planned |
-| [ ] | T-020.4 | Intégrer image et heatmap PDF | Python | 4h | Planned |
-| [ ] | T-020.5 | En-tête et pied de page | Python | 2h | Planned |
-| [ ] | T-020.6 | Disclaimer médical obligatoire | Text | 1h | Planned |
-| [ ] | T-020.7 | Bouton téléchargement frontend | React | 2h | Planned |
+| [x] | T-020.1 | Sélectionner librairie PDF | Recherche | 2h | Selected lightweight standard-library PDF renderer to avoid native/system dependencies in Docker |
+| [x] | T-020.2 | Concevoir template rapport | HTML/CSS | 4h | Added reusable report HTML/CSS template constants and matching PDF layout content |
+| [x] | T-020.3 | Endpoint GET `/report/:id/pdf` | FastAPI | 4h | Added authenticated `GET /report/{id}/pdf` endpoint with owner scoping and PDF download response |
+| [x] | T-020.4 | Intégrer image et heatmap PDF | Python | 4h | PDF renderer embeds source image and Grad-CAM heatmap XObjects when encrypted assets are available |
+| [x] | T-020.5 | En-tête et pied de page | Python | 2h | Added report header, separator lines, disclaimer block, footer, and page marker |
+| [x] | T-020.6 | Disclaimer médical obligatoire | Text | 1h | Added mandatory medical validation disclaimer in generated PDF content |
+| [x] | T-020.7 | Bouton téléchargement frontend | React | 2h | Added PDF download button on result cards calling `GET /report/{id}/pdf` |
 | [ ] | T-020.8 | Tester qualité PDF généré | Test | 3h | Planned |
 | [ ] | T-020.9 | Documenter Chapitre 4.2.3 | LaTeX | 2h | Planned |
 
@@ -85,12 +85,12 @@ Checklist updated from current code review: backend/frontend implementation alre
 
 | Status | ID | Task | Tech | Estimate | Notes |
 | --- | --- | --- | --- | ---: | --- |
-| [ ] | T-022.1 | Modèle Notification | SQLAlchemy | 2h | Planned |
-| [ ] | T-022.2 | Migration BDD | Alembic | 1h | Planned |
-| [ ] | T-022.3 | Endpoint GET/POST `/notifications` | FastAPI | 3h | Planned |
-| [~] | T-022.4 | Composant bell icon avec badge | React | 3h | Bell icon button exists in topbar; badge/count behavior not implemented |
-| [ ] | T-022.5 | Système lecture/non lecture | JS | 2h | Planned |
-| [ ] | T-022.6 | Tester scénarios notification | Test | 2h | Planned |
+| [x] | T-022.1 | Modèle Notification | SQLAlchemy | 2h | Added `Notification` SQLAlchemy model with user scope, category, resource metadata, read state, and timestamps |
+| [x] | T-022.2 | Migration BDD | Alembic | 1h | Added Alembic migration creating `notifications` table and indexes |
+| [x] | T-022.3 | Endpoint GET/POST `/notifications` | FastAPI | 3h | Added authenticated list/create endpoints with unread filtering and admin delivery to another user |
+| [x] | T-022.4 | Composant bell icon avec badge | React | 3h | Added bell notification center with unread badge, popover, and notification history list |
+| [x] | T-022.5 | Système lecture/non lecture | JS | 2h | Added read/unread endpoints and frontend controls for marking notifications read or unread |
+| [x] | T-022.6 | Tester scénarios notification | Test | 2h | Added tests for creation, scoping, admin delivery, read/unread, preferences, and critical upload alerts |
 | [ ] | T-022.7 | Documenter Chapitre 4.2.5 | LaTeX | 1h | Planned |
 
 ## US-043 - Intégration Frontend/API/IA
@@ -102,8 +102,8 @@ Checklist updated from current code review: backend/frontend implementation alre
 | [x] | T-043.3 | Configurer CORS et sécurité | FastAPI | 3h | CORS middleware configured from settings; authenticated routes use bearer token dependencies |
 | [x] | T-043.4 | Intégrer modèle IA dans flux API | Python | 4h | Upload flow calls model `/predict` and `/gradcam`, stores prediction/confidence/latency/heatmap path |
 | [ ] | T-043.5 | Tester flux end-to-end | Test | 6h | Full end-to-end test with frontend, backend, and model service not found; local test commands could not be executed here |
-| [~] | T-043.6 | Gestion erreurs globale | Fullstack | 4h | Structured upload/API errors and frontend translations exist; no app-wide error boundary/global handler found |
-| [~] | T-043.7 | Logs centralisés | Logging | 3h | Audit logs and AI client logging exist; no centralized logging stack found |
+| [x] | T-043.6 | Gestion erreurs globale | Fullstack | 4h | Added React app error boundary/global rejection handler and FastAPI catch-all structured error handler with regression test |
+| [x] | T-043.7 | Logs centralisés | Logging | 3h | Added centralized JSON logging config, request logging middleware with request IDs, rotating JSONL file output, and tests |
 | [ ] | T-043.8 | Documenter architecture Chapitre 4 | LaTeX | 4h | Planned |
 
 ## Sprint 4 Risks
@@ -123,8 +123,8 @@ Checklist updated from current code review: backend/frontend implementation alre
 | [~] | Dashboard | KPIs and recent/session analyses exist in React; dedicated API stats and Chart.js charts remain pending |
 | [~] | Résultats | Diagnostic, confiance, sévérité and Grad-CAM display exist; dedicated result endpoint and true image/heatmap overlay remain pending |
 | [~] | Historique | Analyses are persisted in `medical_images`; filters, pagination, history endpoint, and CSV export remain pending |
-| [ ] | PDF | Un rapport PDF complet est généré avec image, heatmap, en-tête, pied de page et disclaimer médical |
+| [x] | PDF | Rapport PDF generated with image, heatmap, header, footer, disclaimer, and direct frontend download |
 | [~] | Responsive | Responsive CSS is implemented; device/browser verification remains pending |
-| [ ] | Notifications | Les notifications peuvent être créées, listées, marquées lues/non lues et affichées avec badge |
+| [x] | Notifications | Les notifications peuvent être créées, listées, marquées lues/non lues, désactivées et affichées avec badge |
 | [~] | Integration | Frontend/API/model upload-analysis flow is wired; full end-to-end validation remains pending |
 | [ ] | Documentation | Les sections Chapitre 4.2.3, 4.2.5 et architecture Chapitre 4 sont mises à jour |

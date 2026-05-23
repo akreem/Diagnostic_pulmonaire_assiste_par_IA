@@ -108,8 +108,11 @@ def test_history_endpoint_filters_current_user_results():
 
     assert response.status_code == 200
     payload = response.json()
-    assert [item["id"] for item in payload] == [matching.id]
-    assert payload[0]["original_filename"] == "critical-case.png"
+    assert payload["total"] == 1
+    assert payload["page"] == 1
+    assert payload["page_size"] == 20
+    assert [item["id"] for item in payload["items"]] == [matching.id]
+    assert payload["items"][0]["original_filename"] == "critical-case.png"
 
 
 def test_history_endpoint_does_not_return_other_users_records():
@@ -125,8 +128,28 @@ def test_history_endpoint_does_not_return_other_users_records():
 
     assert response.status_code == 200
     payload = response.json()
-    assert len(payload) == 1
-    assert payload[0]["original_filename"] == "other-case.png"
+    assert payload["total"] == 1
+    assert len(payload["items"]) == 1
+    assert payload["items"][0]["original_filename"] == "other-case.png"
+
+
+def test_history_endpoint_paginates_on_server():
+    token = create_admin_token()
+    user = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).json()
+    now = datetime.now(timezone.utc)
+
+    for index in range(5):
+        add_history(user["id"], f"page-{index}.png", created_at=now - timedelta(minutes=index))
+
+    response = client.get("/history?page=2&page_size=2", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 5
+    assert payload["page"] == 2
+    assert payload["page_size"] == 2
+    assert payload["total_pages"] == 3
+    assert [item["original_filename"] for item in payload["items"]] == ["page-2.png", "page-3.png"]
 
 
 def test_history_csv_export_respects_filters_and_user_scope():
