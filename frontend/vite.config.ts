@@ -21,6 +21,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react],
     server: {
       port: 5173,
+      allowedHosts: [
+        'lungai.deployment.sh'
+      ],
       ...(hmrHost
         ? {
             hmr: {
