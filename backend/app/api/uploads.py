@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_consent
 from app.db.session import get_db
 from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.medical_image import MedicalImage, MedicalImageStatus
@@ -39,7 +39,7 @@ def analysis_severity(prediction: str | None, confidence: float | None, is_ambig
 async def upload_medical_images(
     request: Request,
     files: list[UploadFile] = File(default=[]),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ) -> UploadBatchResponse:
     if not files:
@@ -263,7 +263,7 @@ from fastapi.responses import Response
 @router.get("/{image_id}/image", response_class=Response)
 async def get_medical_image(
     image_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ):
     image = db.query(MedicalImage).filter(
@@ -286,7 +286,7 @@ async def get_medical_image(
 @router.get("/{image_id}/gradcam", response_class=Response)
 async def get_gradcam_image(
     image_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ):
     image = db.query(MedicalImage).filter(

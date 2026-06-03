@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_consent
 from app.db.session import get_db
 from app.models.medical_image import MedicalImage
 from app.models.user import User
@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/{image_id}", response_model=MedicalImageRead)
 def read_analysis_result(
     image_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ) -> MedicalImage:
     image = db.scalar(

@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_consent
 from app.db.session import get_db
 from app.models.analysis_history import AnalysisHistory, AnalysisHistoryStatus
 from app.models.user import User
@@ -62,7 +62,7 @@ def export_analysis_history_csv(
     search: str | None = Query(default=None),
     date_from: datetime | None = Query(default=None),
     date_to: datetime | None = Query(default=None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ) -> Response:
     query = build_history_query(
@@ -130,7 +130,7 @@ def list_analysis_history(
     date_to: datetime | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ) -> AnalysisHistoryPage:
     query = build_history_query(

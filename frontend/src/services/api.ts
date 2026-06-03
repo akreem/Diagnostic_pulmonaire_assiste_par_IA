@@ -7,6 +7,7 @@ export type User = {
   full_name: string;
   role: "doctor" | "technician" | "admin";
   is_active: boolean;
+  consent_granted: boolean;
 };
 
 export type AuthResponse = {
@@ -134,7 +135,9 @@ const errorTranslations: Record<string, string> = {
   "Invalid token subject": "Sujet du jeton invalide",
   "Inactive or missing user": "Utilisateur inactif ou introuvable",
   "Failed to load medical image": "Impossible de charger l'image médicale",
-  "Failed to load Grad-CAM image": "Impossible de charger l'image Grad-CAM"
+  "Failed to load Grad-CAM image": "Impossible de charger l'image Grad-CAM",
+  "Le consentement au traitement des données de santé est obligatoire pour s'inscrire.": "Le consentement au traitement des données de santé est obligatoire pour s'inscrire.",
+  "Le consentement au traitement des données de santé est obligatoire pour cette opération.": "Le consentement au traitement des données de santé est obligatoire pour cette opération."
 };
 
 function translateError(message: string): string {
@@ -192,6 +195,7 @@ export function registerUser(payload: {
   full_name: string;
   password: string;
   role: User["role"];
+  consent_granted?: boolean;
 }): Promise<User> {
   return request<User>("/auth/register", {
     method: "POST",
@@ -199,11 +203,19 @@ export function registerUser(payload: {
   });
 }
 
+export function withdrawConsent(): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/consent/withdraw", { method: "POST" });
+}
+
+export function grantConsent(): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/consent/grant", { method: "POST" });
+}
+
 export function getSetupStatus(): Promise<SetupStatus> {
   return request<SetupStatus>("/auth/setup-status");
 }
 
-export function loginUser(payload: { email: string; password: string }): Promise<AuthResponse> {
+export function loginUser(payload: { email: string; password: string; consent_granted: boolean }): Promise<AuthResponse> {
   return request<AuthResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify(payload)

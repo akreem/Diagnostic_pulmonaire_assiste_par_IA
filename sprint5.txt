@@ -1,0 +1,329 @@
+1. Informations du Sprint
+Information Détail
+Nom du Sprint Sprint 5 — Sécurité & RGPD
+Durée 2 semaines
+Date de début 13/04/2026
+Date de fin 26/04/2026
+Objectif du Sprint
+(Sprint Goal)
+Renforcer la sécurité de la plateforme, garantir la conformité RGPD des
+données de santé, et implémenter les mécanismes de protection et d'audit
+Capacity Totale 170 heures (équivalent 30 Story Points)
+Dépendances Sprint 4 US-017 à US-022 (Plateforme intégrée), US-043 (Intégration)
+Dépendances Sprint 1 US-003 à US-005 (Authentification de base)
+Dépendances Sprint 2 US-008 (Anonymisation DICOM (Digital Imaging and
+Communications in Medicine))
+2. User Stories Détaillées du Sprint 5
+US-023 : Chiffrement des données au repos (AES-256)
+Champ Description
+Titre Chiffrement des données au repos
+Description
+En tant que Responsable Sécurité, je veux chiffrer toutes les
+données stockées afin de protéger les informations sensibles en
+cas de compromission du stockage
+Priorité Must Have
+Story Points 8
+Estimation Temps 30 heures
+Dépendances US-006 (Stockage images), US-008 (Anonymisation)
+Critères d'Acceptation
+ Chiffrement AES-256 pour les images médicales stockées
+ Chiffrement de la base de données (données patients, utilisateurs)
+ Gestion sécurisée des clés de chiffrement (KMS ou vault)
+ Déchiffrement transparent pour les utilisateurs autorisés
+ Documentation du processus de chiffrement (Chapitre 6.2.4)
+ Tests de récupération après chiffremen
+
+Tâches Techniques Associées
+ID
+Tâche Description Techno Estimation Statut
+T-023.1 Sélectionner l'algorithme de chiffrement (AES256) Recherche 2h ☐
+T-023.2 Implémenter le chiffrement des fichiers images Python/Crypto 6h ☐
+T-023.3 Configurer le chiffrement de la base de données PostgreSQL TDE 4h ☐
+T-023.4 Mettre en place la gestion des clés (KMS/Vault) HashiCorp Vault 5h ☐
+T-023.5 Implémenter le déchiffrement à la demande Python 4h ☐
+T-023.6 Tester la récupération des données chiffrées Test 4h ☐
+T-023.7 Documenter le processus (Chapitre 6.2.4) LaTeX/Word 3h ☐
+T-023.8 Audit de sécurité du chiffrement Security Scan 2h ☐
+US-024 : Chiffrement des données en transit (HTTPS/TLS)
+Champ Description
+Titre Chiffrement des données en transit
+Description
+En tant que Responsable Sécurité, je veux chiffrer toutes les
+communications afin de protéger les données contre les attaques
+Man-in-the-Middle
+Priorité Must Have
+Story Points 5
+Estimation Temps 20 heures
+Dépendances US-043 (Intégration plateforme)
+Critères d'Acceptation
+ HTTPS obligatoire pour toutes les communications
+ Certificat TLS valide (Let's Encrypt ou CA)
+ TLS 1.2 ou 1.3 uniquement (pas de SSL obsolète)
+ HSTS (HTTP Strict Transport Security) activé
+ Certificats de sécurité configurés correctement
+ Documentation (Chapitre 6.1.3)
+Tâches Techniques Associées 
+
+
+ID
+Tâche Description Techno Estimation Statut
+T-024.1 Obtenir un certificat SSL/TLS Let's Encrypt 2h ☐
+T-024.2 Configurer HTTPS sur le serveur (Nginx/Apache) Nginx 4h ☐
+T-024.3 Forcer la redirection HTTP vers HTTPS Nginx 2h ☐
+T-024.4 Configurer HSTS headers Nginx 2h ☐
+T-024.5 Désactiver les protocoles obsolètes (SSL, TLS
+1.0/1.1) Nginx 2h ☐
+T-024.6 Tester la configuration (SSL Labs) Online Tool 2h ☐
+T-024.7 Documenter (Chapitre 6.1.3) LaTeX/Word 3h ☐
+T-024.8 Configurer les certificats pour les API internes mTLS 3h ☐
+US-025 : Gestion des consentements RGPD
+Champ Description
+Titre Gestion des consentements RGPD
+Description
+En tant que DPO (Data Protection Officer), je veux collecter et gérer les
+consentements utilisateurs afin de respecter les exigences du RGPD pour les
+données de santé
+Priorité Must Have
+Story Points 5
+Estimation Temps 22 heures
+Dépendances US-002 (Inscription), Chapitre 6.3
+Critères d'Acceptation
+ Checkbox de consentement lors de l'inscription
+ Consentement explicite pour le traitement des données de santé
+
+Possibilité de retirer le consentement à tout moment
+ Historique des consentements stocké et auditable
+ Langage clair et compréhensible (pas de jargon)
+ Documentation RGPD (Chapitre 6.3.2)
+Tâches Techniques Associées
+ID
+Tâche Description Techno Estimation Statut
+T-025.1 Concevoir le formulaire de consentement UX/Design 3h ☐
+T-025.2 Créer le modèle de données Consentement SQLAlchemy 2h ☐
+T-025.3 Implémenter la collecte à l'inscription Frontend/Backend 4h ☐
+T-025.4 Créer l'endpoint de retrait de consentement FastAPI 3h ☐
+T-025.5 Stocker l'historique des consentements BDD 2h ☐
+T-025.6 Rédiger les textes de consentement (légal) Juridique 3h ☐
+T-025.7 Tester le workflow complet Test 3h ☐
+T-025.8 Documenter (Chapitre 6.3.2) LaTeX/Word 2h ☐
+US-026 : Droit à l'oubli (suppression des données)
+Champ Description
+Titre Droit à l'oubli
+Description
+En tant que patient/utilisateur, je veux pouvoir demander la
+suppression de mes données afin de exercer mon droit à l'oubli
+(RGPD Article 17)
+Priorité Must Have
+Story Points 5
+Estimation Temps 24 heures
+Dépendances US-025 (Consentements), US-019 (Historique)
+Critères d'Acceptation
+ Formulaire de demande de suppression accessible
+ Suppression complète des données personnelles (BDD + fichiers)
+ Conservation des logs d'audit (obligation légale)
+ Confirmation de suppression envoyée à l'utilisateur
+ Délai de traitement respecté (< 30 jours RGPD)
+
+ Documentation (Chapitre 6.3.3)
+Tâches Techniques Associées
+ID
+Tâche Description Techno Estimation Statut
+T-026.1 Concevoir le formulaire de demande Frontend 3h ☐
+T-026.2 Créer l'endpoint DELETE /user/:id/data FastAPI 4h ☐
+T-026.3 Implémenter la suppression en cascade (BDD) SQLAlchemy 4h ☐
+T-026.4 Supprimer les fichiers images associés Storage 3h ☐
+T-026.5 Conserver les logs d'audit (exception légale) Logging 2h ☐
+T-026.6 Envoyer la confirmation de suppression Email 2h ☐
+T-026.7 Tester la suppression complète Test 4h ☐
+T-026.8 Documenter (Chapitre 6.3.3) LaTeX/Word 2h ☐
+US-027 : Audit logs de sécurité (Traçabilité)
+Champ Description
+Titre Audit logs de sécurité
+Description
+En tant que Administrateur Sécurité, je veux pouvoir tracer toutes les
+actions sensibles afin de détecter les accès non autorisés et assurer
+l'auditabilité (RGPD Article 30)
+Priorité Must Have
+Story Points 5
+Estimation Temps 26 heures
+Dépendances US-005 (Journalisation S1), US-008 (Anonymisation)
+Critères d'Acceptation
+ Logs de toutes les connexions (succès/échec)
+ Logs de tous les accès aux données médicales
+ Logs des modifications de données (création, update, delete)
+ Logs exportables pour audit externe
+ Protection des logs contre la modification (WORM)
+ Documentation (Chapitre 6.2.5 & 6.2.6)
+Tâches Techniques Associées
+
+
+ID
+Tâche Description Techno Estimation Statut
+T-027.1 Concevoir le modèle de données AuditLog étendu SQLAlchemy 3h ☐
+T-027.2 Implémenter le logging pour tous les endpoints FastAPI 5h ☐
+T-027.3 Capturer les métadonnées (IP, user-agent,
+timestamp) Python 3h ☐
+T-027.4 Stocker les logs de manière immuable WORM Storage 4h ☐
+T-027.5 Créer l'interface de consultation des logs (admin) React 4h ☐
+T-027.6 Implémenter l'export des logs (CSV/JSON) Python 3h ☐
+T-027.7 Tester l'intégrité des logs Test 2h ☐
+T-027.8 Documenter (Chapitre 6.2.5 & 6.2.6) LaTeX/Word 2h ☐
+US-028 : Tests de pénétration (Pentest) et vulnérabilités
+Champ Description
+Titre Tests de pénétration
+Description En tant que Responsable Sécurité, je veux réaliser des tests d'intrusion afin
+de détecter et corriger les vulnérabilités avant le déploiement
+Priorité Should Have
+Story Points 8
+Estimation Temps 28 heures
+Dépendances US-023 à US-027 (Toutes les sécurités)
+Critères d'Acceptation
+ Scan de vulnérabilités automatisé (SAST/DAST)
+ Tests d'intrusion manuels sur les endpoints critiques
+ Rapport de sécurité généré avec sévérité des vulnérabilités
+ Correction des vulnérabilités critiques et majeures
+ Re-test après correction
+ Documentation (Chapitre 6.1.5) 
+
+Tâches Techniques Associées
+ID
+Tâche Description Techno Estimation Statut
+T-028.1 Configurer les outils de scan SAST SonarQube 3h ☐
+T-028.2 Configurer les outils de scan DAST OWASP ZAP 4h ☐
+T-028.3 Réaliser les tests d'intrusion manuels Manual 6h ☐
+T-028.4 Tester les injections SQL SQLMap 3h ☐
+T-028.5 Tester les failles XSS et CSRF Manual 3h ☐
+T-028.6 Tester l'authentification et autorisation Manual 3h ☐
+T-028.7 Générer le rapport de sécurité Report 3h ☐
+T-028.8 Corriger les vulnérabilités critiques Dev 3h ☐
+T-028.9 Documenter (Chapitre 6.1.5) LaTeX/Word 2h ☐
+US-044 : Analyse des menaces (STRIDE30)
+Champ Description
+Titre Analyse des menaces
+Description En tant que Architecte Sécurité, je veux réaliser une analyse des menaces afin de
+identifier les risques et mettre en place les contre-mesures appropriées
+Priorité Must Have
+Story Points 5
+Estimation Temps 20 heures
+Dépendances Chapitre 6.1.1
+30 STRIDE : Le modèle de menace STRIDE, développé par Microsoft, est apparu comme l’un des cadres les plus efficaces pour une
+planification proactive de la sécurité. L’acronyme STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of
+Service (DoS) et Elevation of Privilege) est une approche systématique de la sécurité qui aide les équipes de développement à penser
+comme des hackers pour protéger leurs systèmes avant que des violations ne se produisent.
+Source : https://www.purestorage.com/fr/knowledge/stride-threatmodel.html#:~:text=L'acronyme%20STRIDE%20(Spoofing%2C,des%20violations%20ne%20se%20produisent.
+Critères d'Acceptation
+ Analyse STRIDE complète (Spoofing, Tampering, Repudiation, etc ).
+
+
+Diagramme de flux de données sécurisé
+ Matrice des risques avec niveau de sévérité
+ Contre-mesures documentées pour chaque menace
+ Validation avec l'encadreur
+ Documentation (Chapitre 6.1.1)
+Tâches Techniques Associées
+ID
+Tâche Description Techno Estimation Statut
+T-044.1 Étudier la méthodologie STRIDE Recherche 2h ☐
+T-044.2 Créer le diagramme de flux de données Draw.io 3h ☐
+T-044.3 Identifier les menaces par catégorie STRIDE Analysis 5h ☐
+T-044.4 Évaluer la sévérité de chaque menace (DREAD) Analysis 3h ☐
+T-044.5 Définir les contre-mesures Security 4h ☐
+T-044.6 Créer la matrice des risques Excel/Doc 2h ☐
+T-044.7 Valider avec l'encadreur Réunion 1h ☐
+Tableau des Tâches du Sprint
+ID User
+Story Tâche Techno Est.
+(h) Restant (h) Statut Assigné à
+T-023.1 US-023 Sélectionner algorithme
+chiffrement Recherche 2 ☐ À Faire
+T-023.2 US-023 Chiffrement fichiers images Python/Crypto 6 ☐ À Faire
+T-023.3 US-023 Chiffrement base de données PostgreSQL 4 ☐ À Faire
+T-023.4 US-023 Gestion des clés (KMS/Vault) HashiCorp 5 ☐ À Faire
+T-023.5 US-023 Déchiffrement à la demande Python 4 ☐ À Faire
+T-023.6 US-023 Tester récupération données Test 4 ☐ À Faire
+T-023.7 US-023 Documenter (Chapitre 6.2.4) LaTeX 3 ☐ À Faire
+T-023.8 US-023 Audit sécurité chiffrement Security 2 ☐ À Faire
+T-024.1 US-024 Obtenir certificat SSL/TLS Let's Encrypt 2 ☐ À Faire
+
+T-024.2 US-024 Configurer HTTPS (Nginx) Nginx 4 ☐ À Faire
+T-024.3 US-024 Redirection HTTP vers HTTPS Nginx 2 ☐ À Faire
+T-024.4 US-024 Configurer HSTS headers Nginx 2 ☐ À Faire
+T-024.5 US-024 Désactiver protocoles obsolètes Nginx 2 ☐ À Faire
+T-024.6 US-024 Tester configuration (SSL Labs) Online 2 ☐ À Faire
+T-024.7 US-024 Documenter (Chapitre 6.1.3) LaTeX 3 ☐ À Faire
+T-024.8 US-024 Certificats API internes mTLS 3 ☐ À Faire
+T-025.1 US-025 Concevoir formulaire
+consentement UX/Design 3 ☐ À Faire
+T-025.2 US-025 Modèle de données Consentement SQLAlchemy 2 ☐ À Faire
+T-025.3 US-025 Collecte à l'inscription Fullstack 4 ☐ À Faire
+T-025.4 US-025 Endpoint retrait consentement FastAPI 3 ☐ À Faire
+T-025.5 US-025 Historique des consentements BDD 2 ☐ À Faire
+T-025.6 US-025 Rédiger textes de consentement Juridique 3 ☐ À Faire
+T-025.7 US-025 Tester workflow complet Test 3 ☐ À Faire
+T-025.8 US-025 Documenter (Chapitre 6.3.2) LaTeX 2 ☐ À Faire
+T-026.1 US-026 Formulaire demande suppression Frontend 3 ☐ À Faire
+T-026.2 US-026 Endpoint DELETE /user/:id/data FastAPI 4 ☐ À Faire
+T-026.3 US-026 Suppression en cascade (BDD) SQLAlchemy 4 ☐ À Faire
+T-026.4 US-026 Supprimer fichiers images Storage 3 ☐ À Faire
+T-026.5 US-026 Conserver logs d'audit Logging 2 ☐ À Faire
+T-026.6 US-026 Confirmation suppression (email) Email 2 ☐ À Faire
+T-026.7 US-026 Tester suppression complète Test 4 ☐ À Faire
+T-026.8 US-026 Documenter (Chapitre 6.3.3) LaTeX 2 ☐ À Faire
+T-027.1 US-027 Modèle AuditLog étendu SQLAlchemy 3 ☐ À Faire
+T-027.2 US-027 Logging tous les endpoints FastAPI 5 ☐ À Faire
+T-027.3 US-027 Capturer métadonnées Python 3 ☐ À Faire
+T-027.4 US-027 Stockage logs immuable WORM 4 ☐ À Faire 
+T-027.5 US-027 Interface consultation logs (admin) React 4 ☐ À Faire
+T-027.6 US-027 Export des logs (CSV/JSON) Python 3 ☐ À Faire
+T-027.7 US-027 Tester intégrité des logs Test 2 ☐ À Faire
+T-027.8 US-027 Documenter (Chapitre 6.2.5) LaTeX 2 ☐ À Faire
+T-028.1 US-028 Configurer scan SAST SonarQube 3 ☐ À Faire
+T-028.2 US-028 Configurer scan DAST OWASP ZAP 4 ☐ À Faire
+T-028.3 US-028 Tests intrusion manuels Manual 6 ☐ À Faire
+T-028.4 US-028 Tester injections SQL SQLMap 3 ☐ À Faire
+T-028.5 US-028 Tester failles XSS/CSRF Manual 3 ☐ À Faire
+T-028.6 US-028 Tester authentification/autorisation Manual 3 ☐ À Faire
+T-028.7 US-028 Générer rapport sécurité Report 3 ☐ À Faire
+T-028.8 US-028 Corriger vulnérabilités critiques Dev 3 ☐ À Faire
+T-028.9 US-028 Documenter (Chapitre 6.1.5) LaTeX 2 ☐ À Faire
+T-044.1 US-044 Étudier méthodologie STRIDE Recherche 2 ☐ À Faire
+T-044.2 US-044 Diagramme flux de données Draw.io 3 ☐ À Faire
+T-044.3 US-044 Identifier menaces STRIDE Analysis 5 ☐ À Faire
+T-044.4 US-044 Évaluer sévérité (DREAD) Analysis 3 ☐ À Faire
+T-044.5 US-044 Définir contre-mesures Security 4 ☐ À Faire
+T-044.6 US-044 Matrice des risques Excel/Doc 2 ☐ À Faire
+T-044.7 US-044 Valider avec encadreur Réunion 1 ☐ À Faire
+TOTAL 170h
+
+Risk Log (Journal des Risques) - Sprint 5
+ID Risque Impact Probabilité Mitigation Statut
+R-026 Complexité du chiffrement AES256 Élevé Moyenne Utiliser librairies éprouvées
+(cryptography.io) ☐ Ouvert
+R-027 Perte des clés de chiffrement Critique Faible Backup sécurisé des clés, KMS ☐ Ouvert
+R-028 Non-conformité RGPD détectée
+tardivement Élevé Moyenne Audit RGPD précoce, validation
+juridique ☐ Ouvert
+R-029 Vulnérabilités critiques non
+corrigeables Élevé Faible Refactorisation, contournements
+sécurité ☐ Ouvert
+R-030 Performance impactée par le
+chiffrement Moyen Moyenne Optimisation, chiffrement
+asynchrone ☐ Ouvert
+R-031 Logs trop volumineux (stockage) Moyen Moyenne Rotation des logs, archivage
+automatique ☐ Ouvert
+R-032 Délais de validation encadreur Moyen Moyenne Rendez-vous fixe J5 et J10 du Sprint ☐ Ouvert
+R-033 Complexité juridique RGPD Élevé Moyenne Consulter ressources CNIL, modèles
+standards ☐ Ouvert
+Definition of Done
+Pour qu'une tâche soit considérée comme terminée dans ce Sprint : 
+
+
+Critère Vérification
+Code Code développé, commité et pushé sur Git
+Tests Tests de sécurité passants (SAST/DAST)
+Review Code reviewé
+Documentation Code commenté, README mis à jour, Chapitre 6 rédigé
+Sécurité Pas de vulnérabilités critiques, chiffrement validé
+RGPD Conformité vérifiée avec checklist RGPD
+Démo Fonctionnalité démontrable localement
+Mémoire Section correspondante du Chapitre 6 rédigée

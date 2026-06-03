@@ -25,12 +25,234 @@ import {
   NotificationPreference,
   updateNotificationPreference,
   uploadMedicalImages,
-  User
+  User,
+  grantConsent
 } from "../services/api";
 
 type Props = {
   user: User;
+  language: "fr" | "ar";
+  onLanguageChange: (lang: "fr" | "ar") => void;
   onLogout: () => void;
+};
+
+const dashboardTranslations = {
+  fr: {
+    overview: "Dashboard",
+    intake: "Analyses",
+    results: "Reports",
+    patients: "Historique des analyses",
+    admin: "Settings",
+    workspace: "Workspace",
+    diagnosticWorkstation: "Diagnostic Workstation",
+    lungsAssist: "Diagnostic pulmonaire assisté par IA",
+    user: "Utilisateur",
+    role: "Rôle",
+    email: "Email",
+    access: "Accès",
+    active: "Actif",
+    inactive: "Inactif",
+    disclaimer: "Les résultats IA doivent être relus par un professionnel de santé autorisé.",
+    recentAnalysesTitle: "Analyses récentes",
+    viewAll: "Voir tout",
+    totalExams: "Examens total",
+    completedAnalyses: "Analyses terminées",
+    criticalCases: "Cas critiques",
+    normals: "Normaux",
+    loading: "Chargement",
+    api: "API",
+    stable: "Stable",
+    toReview: "A réviser",
+    zeroAlert: "0 alerte",
+    automated: "Automatisé",
+    diagnosticsRepartition: "Répartition des diagnostics",
+    pipelineStatus: "Statuts du pipeline",
+    secureIntake: "Secure intake",
+    importImages: "Importer des images médicales",
+    secureDrop: "Dépôt sécurisé",
+    chooseImages: "Choisir des images médicales",
+    selectedSuffix: "sélectionné",
+    selectedPluralSuffix: "sélectionnés",
+    dicomFormatNote: "DICOM, PNG ou JPEG. Les fichiers sont anonymisés et chiffrés au repos.",
+    importAndAnalyze: "Importer et analyser",
+    importInProgress: "Import en cours...",
+    noReport: "Aucun rapport disponible",
+    intakePrompt: "Importez un examen pour générer une carte de résultat diagnostic.",
+    startAnalysis: "Lancer une analyse",
+    users: "Utilisateurs",
+    refresh: "Actualiser",
+    fullName: "Nom complet",
+    emailAddress: "Adresse e-mail",
+    addUser: "Ajouter un utilisateur",
+    analysisHistory: "Historique des analyses",
+    exportCsv: "Exporter CSV",
+    searchPlaceholder: "Rechercher fichier",
+    allStatuses: "Tous statuts",
+    allDiagnostics: "Tous diagnostics",
+    allSeverities: "Toutes sévérités",
+    ambiguous: "Ambigus",
+    page: "Page",
+    prev: "Préc.",
+    next: "Suiv.",
+    activeNotifications: "Notifications actives",
+    noNotification: "Aucune notification",
+    read: "Lu",
+    unread: "Non lu",
+    analysisId: "Analyse ID",
+    exam: "Examen",
+    date: "Date",
+    status: "Statut",
+    result: "Résultat",
+    confidence: "Confiance",
+    normalSeverity: "Normal",
+    suspectSeverity: "Suspect",
+    criticalSeverity: "Critique",
+    pendingStatus: "En attente",
+    completedStatus: "Terminée",
+    failedStatus: "Échouée",
+    yes: "Oui",
+    no: "Non",
+    technicalSupport: "Assistance technique",
+    diagnosticIA: "Diagnostic IA",
+    conclusionIA: "Conclusion IA",
+    pipeline: "Pipeline",
+    performance: "Performance",
+    responsible: "Responsable",
+    diagnosticResult: "Diagnostic result",
+    anonymizedExam: "Examen anonymisé",
+    source: "Source",
+    id: "ID",
+    reset: "Reset",
+    moveImage: "Déplacer l'image",
+    zoomOut: "Réduire le zoom",
+    zoomIn: "Agrandir le zoom",
+    contrast: "Contraste",
+    brightness: "Luminosité",
+    showMeasure: "Afficher la mesure",
+    resetView: "Réinitialiser la vue",
+    exportAnnotated: "Exporter l'image annotée",
+    noAnalysis: "Aucune analyse dans la session",
+    importPrompt: "Importez une image médicale pour créer une ligne d'analyse.",
+    newAnalysis: "Nouvelle analyse",
+    noHistory: "Aucun historique disponible",
+    historyPrompt: "Les analyses terminées apparaîtront ici avec leurs métadonnées."
+  },
+  ar: {
+    overview: "لوحة التحكم",
+    intake: "التحاليل",
+    results: "التقارير",
+    patients: "سجل التحاليل",
+    admin: "الإعدادات",
+    workspace: "مساحة العمل",
+    diagnosticWorkstation: "محطة التشخيص",
+    lungsAssist: "التشخيص الرئوي بمساعدة الذكاء الاصطناعي",
+    user: "المستخدم",
+    role: "الدور",
+    email: "البريد الإلكتروني",
+    access: "الصلاحية",
+    active: "نشط",
+    inactive: "غير نشط",
+    disclaimer: "يجب مراجعة نتائج الذكاء الاصطناعي من قبل أخصائي صحي مرخص له.",
+    recentAnalysesTitle: "التحاليل الأخيرة",
+    viewAll: "عرض الكل",
+    totalExams: "إجمالي الفحوصات",
+    completedAnalyses: "التحاليل المكتملة",
+    criticalCases: "الحالات الحرجة",
+    normals: "سليم",
+    loading: "جاري التحميل",
+    api: "واجهة البرمجة",
+    stable: "مستقر",
+    toReview: "للمراجعة",
+    zeroAlert: "لا توجد تنبيهات",
+    automated: "تلقائي",
+    diagnosticsRepartition: "توزيع التشخيصات",
+    pipelineStatus: "حالات خط المعالجة",
+    secureIntake: "إيداع آمن",
+    importImages: "استيراد الصور الطبية",
+    secureDrop: "إيداع آمن",
+    chooseImages: "اختر صورًا طبية",
+    selectedSuffix: "ملف تم اختياره",
+    selectedPluralSuffix: "ملفات تم اختيارها",
+    dicomFormatNote: "DICOM أو PNG أو JPEG. يتم إخفاء هوية الملفات وتشفيرها عند عدم النشاط.",
+    importAndAnalyze: "استيراد وتحليل",
+    importInProgress: "جاري الاستيراد...",
+    noReport: "لا يوجد تقارير متاحة",
+    intakePrompt: "استورد فحصًا لإنشاء بطاقة نتيجة التشخيص.",
+    startAnalysis: "بدء التحليل",
+    users: "المستخدمون",
+    refresh: "تحديث",
+    fullName: "الاسم الكامل",
+    emailAddress: "البريد الإلكتروني",
+    addUser: "إضافة مستخدم",
+    analysisHistory: "سجل التحاليل",
+    exportCsv: "تصدير CSV",
+    searchPlaceholder: "البحث عن ملف",
+    allStatuses: "جميع الحالات",
+    allDiagnostics: "جميع التشخيصات",
+    allSeverities: "جميع مستويات الخطورة",
+    ambiguous: "غامض",
+    page: "صفحة",
+    prev: "السابق",
+    next: "التالي",
+    activeNotifications: "التنبيهات نشطة",
+    noNotification: "لا توجد تنبيهات",
+    read: "مقروء",
+    unread: "غير مقروء",
+    analysisId: "معرف التحليل",
+    exam: "الفحص",
+    date: "التاريخ",
+    status: "الحالة",
+    result: "النتيجة",
+    confidence: "الثقة",
+    normalSeverity: "سليم",
+    suspectSeverity: "مشتبه به",
+    criticalSeverity: "حرجة",
+    pendingStatus: "قيد الانتظار",
+    completedStatus: "مكتمل",
+    failedStatus: "فشل",
+    yes: "نعم",
+    no: "لا",
+    technicalSupport: "الدعم الفني",
+    diagnosticIA: "ذكاء اصطناعي",
+    conclusionIA: "استنتاج الذكاء الاصطناعي",
+    pipeline: "خط المعالجة",
+    performance: "الأداء",
+    responsible: "المسؤول",
+    diagnosticResult: "نتيجة التشخيص",
+    anonymizedExam: "فحص مجهول الهوية",
+    source: "المصدر",
+    id: "الرقم",
+    reset: "إعادة تعيين",
+    moveImage: "تحريك الصورة",
+    zoomOut: "تصغير",
+    zoomIn: "تكبير",
+    contrast: "التباين",
+    brightness: "السطوع",
+    showMeasure: "عرض القياس",
+    resetView: "إعادة تعيين الرؤية",
+    exportAnnotated: "تصدير الصورة المعلمة",
+    noAnalysis: "لا توجد تحاليل في الجلسة",
+    importPrompt: "استورد صورة طبية لإنشاء سطر تحليل.",
+    newAnalysis: "تحليل جديد",
+    noHistory: "سجل فارغ",
+    historyPrompt: "ستظهر التحاليل المكتملة هنا مع بياناتها."
+  }
+};
+
+const severityLabelMap: Record<string, { fr: string; ar: string }> = {
+  Normal: { fr: "Normal", ar: "سليم" },
+  Suspect: { fr: "Suspect", ar: "مشتبه به" },
+  Critical: { fr: "Critique", ar: "حرج" },
+  Critique: { fr: "Critique", ar: "حرج" },
+  Pending: { fr: "En attente", ar: "قيد الانتظار" }
+};
+
+const statusLabelMap: Record<string, { fr: string; ar: string }> = {
+  uploaded: { fr: "Importé", ar: "مستورد" },
+  validation_failed: { fr: "Validation échouée", ar: "فشل التحقق" },
+  validated: { fr: "Validé", ar: "تم التحقق" },
+  anonymized: { fr: "Anonymisé", ar: "مجهول الهوية" },
+  analyzed: { fr: "Analysé", ar: "محلل" }
 };
 
 type PanelId = "overview" | "patients" | "intake" | "results" | "admin";
@@ -384,19 +606,19 @@ const CanvasOverlayViewer = memo(function CanvasOverlayViewer({
   return <canvas ref={canvasRef} aria-label="Superposition image et heatmap Grad-CAM" className="scan-overlay-canvas" />;
 });
 
-function roleLabel(role: User["role"]) {
-  const labels: Record<User["role"], string> = {
-    doctor: "Medecin",
-    technician: "Technicien",
-    admin: "Administrateur"
+function roleLabel(role: User["role"], language: "fr" | "ar" = "fr") {
+  const labels: Record<User["role"], { fr: string; ar: string }> = {
+    doctor: { fr: "Médecin", ar: "طبيب" },
+    technician: { fr: "Technicien", ar: "تقني" },
+    admin: { fr: "Administrateur", ar: "مشرف" }
   };
-  return labels[role];
+  return labels[role] ? labels[role][language] : role;
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, language: "fr" | "ar" = "fr") {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Date indisponible";
-  return new Intl.DateTimeFormat("fr-FR", {
+  if (Number.isNaN(date.getTime())) return language === "ar" ? "التاريخ غير متاح" : "Date indisponible";
+  return new Intl.DateTimeFormat(language === "ar" ? "ar-TN" : "fr-FR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -412,22 +634,29 @@ function getSeverity(image: MedicalImage): Severity {
   return "Normal";
 }
 
-function predictionLabel(image: MedicalImage) {
-  if (image.ai_analysis_status === "failed") return "Modele IA indisponible";
-  if (image.status !== "analyzed") return "Analyse en attente";
-  return image.ai_prediction === "PNEUMONIA" ? "Pneumonie detectee" : "Aucun signe de pneumonie";
+function predictionLabel(image: MedicalImage, language: "fr" | "ar" = "fr") {
+  if (image.ai_analysis_status === "failed") {
+    return language === "ar" ? "نموذج الذكاء الاصطناعي غير متاح" : "Modèle IA indisponible";
+  }
+  if (image.status !== "analyzed") {
+    return language === "ar" ? "التحليل قيد الانتظار" : "Analyse en attente";
+  }
+  if (image.ai_prediction === "PNEUMONIA") {
+    return language === "ar" ? "تم اكتشاف التهاب رئوي" : "Pneumonie détectée";
+  }
+  return language === "ar" ? "لا توجد علامات التهاب رئوي" : "Aucun signe de pneumonie";
 }
 
-function statusLabel(image: MedicalImage) {
-  if (image.ai_analysis_status === "failed") return "IA indisponible";
-  const labels: Record<MedicalImage["status"], string> = {
-    uploaded: "Importe",
-    validation_failed: "Validation echouee",
-    validated: "Valide",
-    anonymized: "Anonymise",
-    analyzed: "Analyse"
+function statusLabel(image: MedicalImage, language: "fr" | "ar" = "fr") {
+  if (image.ai_analysis_status === "failed") return language === "ar" ? "الذكاء الاصطناعي غير متاح" : "IA indisponible";
+  const labels: Record<MedicalImage["status"], { fr: string; ar: string }> = {
+    uploaded: { fr: "Importé", ar: "مستورد" },
+    validation_failed: { fr: "Validation échouée", ar: "فشل التحقق" },
+    validated: { fr: "Validé", ar: "تم التحقق" },
+    anonymized: { fr: "Anonymisé", ar: "مجهول الهوية" },
+    analyzed: { fr: "Analysé", ar: "محلل" }
   };
-  return labels[image.status];
+  return labels[image.status] ? labels[image.status][language] : image.status;
 }
 
 function confidencePercent(image: MedicalImage) {
@@ -450,15 +679,20 @@ function ClinicalAlert({
   );
 }
 
-function SeverityBadge({ severity }: { severity: Severity }) {
-  return <span className={`severity-badge ${severity.toLowerCase()}`}>{severity}</span>;
+function SeverityBadge({ severity, language = "fr" }: { severity: Severity; language?: "fr" | "ar" }) {
+  const labels = {
+    fr: { Normal: "Normal", Suspect: "Suspect", Critique: "Critique" },
+    ar: { Normal: "سليم", Suspect: "مشتبه به", Critique: "حرج" }
+  };
+  const label = labels[language][severity] ?? severity;
+  return <span className={`severity-badge ${severity.toLowerCase()}`}>{label}</span>;
 }
 
-function ConfidenceBar({ value }: { value: number }) {
+function ConfidenceBar({ value, language = "fr" }: { value: number; language?: "fr" | "ar" }) {
   return (
-    <div className="confidence-meter" aria-label={`Score de confiance ${value}%`}>
+    <div className="confidence-meter" aria-label={language === "ar" ? `مستوى الثقة ${value}%` : `Score de confiance ${value}%`}>
       <div className="confidence-meter-header">
-        <span>Confiance IA</span>
+        <span>{language === "ar" ? "ثقة الذكاء الاصطناعي" : "Confiance IA"}</span>
         <strong>{value}%</strong>
       </div>
       <div className="confidence-track">
@@ -549,7 +783,7 @@ function DashboardChart({
   );
 }
 
-const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) {
+const ScanViewer = memo(function ScanViewer({ image, language = "fr" }: { image: MedicalImage; language?: "fr" | "ar" }) {
   const annotatedCanvasRef = useRef<HTMLCanvasElement>(null);
   const { ref: viewportRef, isNearViewport } = useNearViewport<HTMLDivElement>();
   const [zoom, setZoom] = useState(1);
@@ -563,6 +797,8 @@ const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) 
   const zoomPercent = Math.round(zoom * 100);
   const brightnessPercent = Math.round(brightness * 100);
   const contrastPercent = Math.round(contrast * 100);
+
+  const t = dashboardTranslations[language];
 
   function changeZoom(delta: number) {
     setZoom((current) => Math.min(2.5, Math.max(0.75, Number((current + delta).toFixed(2)))));
@@ -616,86 +852,86 @@ const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) 
   }
 
   return (
-    <section className="scan-viewer-panel" aria-label="Visionneuse medicale">
-      <div className="scan-toolbar" aria-label="Outils d'imagerie">
+    <section className="scan-viewer-panel" aria-label={language === "ar" ? "عارض الصور" : "Visionneuse médicale"}>
+      <div className="scan-toolbar" aria-label={language === "ar" ? "أدوات التصوير" : "Outils d'imagerie"}>
         <button
           aria-pressed={dragEnabled}
-          aria-label="Déplacer l'image"
+          aria-label={t.moveImage}
           className={`tool-button ${dragEnabled ? "active" : ""}`}
           onClick={() => setDragEnabled((enabled) => !enabled)}
-          title="Déplacer l'image"
+          title={t.moveImage}
           type="button"
         >
           <Icon name="drag" />
         </button>
         <button
-          aria-label="Réduire le zoom"
+          aria-label={t.zoomOut}
           className="tool-button"
           disabled={zoom <= 0.75}
           onClick={() => changeZoom(-0.25)}
-          title="Réduire le zoom"
+          title={t.zoomOut}
           type="button"
         >
           <Icon name="zoomOut" />
         </button>
         <button
-          aria-label="Agrandir le zoom"
+          aria-label={t.zoomIn}
           className="tool-button"
           disabled={zoom >= 2.5}
           onClick={() => changeZoom(0.25)}
-          title="Agrandir le zoom"
+          title={t.zoomIn}
           type="button"
         >
           <Icon name="zoomIn" />
         </button>
         <button
-          aria-label="Réinitialiser le zoom"
+          aria-label={language === "ar" ? "إعادة تعيين الزوم" : "Réinitialiser le zoom"}
           className="tool-button zoom-reset-button"
           onClick={() => setZoom(1)}
-          title="Réinitialiser le zoom"
+          title={language === "ar" ? "إعادة تعيين الزوم" : "Réinitialiser le zoom"}
           type="button"
         >
           {zoomPercent}%
         </button>
         <button
-          aria-label={`Contraste ${contrastPercent}%`}
+          aria-label={`${t.contrast} ${contrastPercent}%`}
           className={`tool-button ${contrast !== 1 ? "active" : ""}`}
           onClick={cycleContrast}
-          title={`Contraste ${contrastPercent}%`}
+          title={`${t.contrast} ${contrastPercent}%`}
           type="button"
         >
           <Icon name="contrast" />
         </button>
         <button
-          aria-label={`Luminosité ${brightnessPercent}%`}
+          aria-label={`${t.brightness} ${brightnessPercent}%`}
           className={`tool-button ${brightness !== 1 ? "active" : ""}`}
           onClick={cycleBrightness}
-          title={`Luminosité ${brightnessPercent}%`}
+          title={`${t.brightness} ${brightnessPercent}%`}
           type="button"
         >
           <Icon name="brightness" />
         </button>
         <button
           aria-pressed={measureEnabled}
-          aria-label="Afficher la mesure"
+          aria-label={t.showMeasure}
           className={`tool-button ${measureEnabled ? "active" : ""}`}
           onClick={() => setMeasureEnabled((enabled) => !enabled)}
-          title="Afficher la mesure"
+          title={t.showMeasure}
           type="button"
         >
           <Icon name="measure" />
         </button>
-        <button className="tool-button zoom-reset-button" onClick={resetViewer} title="Réinitialiser la vue" type="button">
-          Reset
+        <button className="tool-button zoom-reset-button" onClick={resetViewer} title={t.resetView} type="button">
+          {t.reset}
         </button>
         <button
           className="tool-button export-image-button"
           disabled={!canExport}
           onClick={exportAnnotatedImage}
-          title="Exporter l'image annotée"
+          title={t.exportAnnotated}
           type="button"
         >
-          PNG
+          {language === "ar" ? "صورة" : "PNG"}
         </button>
       </div>
       <div
@@ -716,18 +952,18 @@ const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) 
           {image.status === "analyzed" && isNearViewport ? (
             <CanvasOverlayViewer canvasRef={annotatedCanvasRef} imageId={image.id} onReady={setCanExport} />
           ) : image.status === "analyzed" ? (
-            <div className="scan-skeleton" aria-label="Image en attente de chargement optimisé" />
+            <div className="scan-skeleton" aria-label={language === "ar" ? "جاري تحميل الصورة..." : "Image en attente de chargement optimisé"} />
           ) : (
             <div className="scan-skeleton" />
           )}
           {image.ai_prediction === "PNEUMONIA" && (
             <div className="scan-annotation">
-              <span>Opacite suspecte</span>
+              <span>{language === "ar" ? "تعتيم مشتبه به" : "Opacité suspecte"}</span>
             </div>
           )}
           {measureEnabled && (
             <div className="scan-measurement" aria-hidden="true">
-              <span>42 mm</span>
+              <span>{language === "ar" ? "42 مم" : "42 mm"}</span>
             </div>
           )}
         </div>
@@ -736,12 +972,13 @@ const ScanViewer = memo(function ScanViewer({ image }: { image: MedicalImage }) 
   );
 });
 
-const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }: { image: MedicalImage; user: User }) {
+const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user, language = "fr" }: { image: MedicalImage; user: User; language?: "fr" | "ar" }) {
   const [result, setResult] = useState(image);
   const [pdfDownloading, setPdfDownloading] = useState(false);
   const [pdfError, setPdfError] = useState("");
   const severity = getSeverity(result);
   const confidence = confidencePercent(result);
+  const t = dashboardTranslations[language];
 
   useEffect(() => {
     let mounted = true;
@@ -761,7 +998,7 @@ const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }:
     try {
       await downloadReportPdf(result.id, result.original_filename);
     } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Impossible de telecharger le rapport PDF");
+      setPdfError(err instanceof Error ? err.message : (language === "ar" ? "فشل تحميل تقرير PDF" : "Impossible de télécharger le rapport PDF"));
     } finally {
       setPdfDownloading(false);
     }
@@ -771,33 +1008,33 @@ const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }:
     <article className="diagnostic-result-card">
       <header className="diagnostic-header">
         <div>
-          <p className="section-kicker">Diagnostic result</p>
+          <p className="section-kicker">{t.diagnosticResult}</p>
           <h3>{result.original_filename}</h3>
         </div>
         <div className="diagnostic-header-actions">
-          <SeverityBadge severity={severity} />
+          <SeverityBadge severity={severity} language={language} />
           <button className="secondary" disabled={pdfDownloading} onClick={handlePdfDownload} type="button">
-            {pdfDownloading ? "PDF..." : "PDF"}
+            {pdfDownloading ? (language === "ar" ? "جاري تحميل PDF..." : "PDF...") : "PDF"}
           </button>
         </div>
       </header>
 
       <div className="patient-info-row">
         <span>
-          Analyse
-          <strong>Examen anonymise</strong>
+          {language === "ar" ? "تحليل" : "Analyse"}
+          <strong>{t.anonymizedExam}</strong>
         </span>
         <span>
-          Source
-          <strong>N/R</strong>
+          {t.source}
+          <strong>{language === "ar" ? "غير متوفر" : "N/R"}</strong>
         </span>
         <span>
-          ID
+          {t.id}
           <strong>PFD-{String(result.id).padStart(5, "0")}</strong>
         </span>
         <span>
-          Date
-          <strong>{formatDate(result.created_at)}</strong>
+          {t.date}
+          <strong>{formatDate(result.created_at, language)}</strong>
         </span>
       </div>
 
@@ -805,46 +1042,48 @@ const DiagnosticResultCard = memo(function DiagnosticResultCard({ image, user }:
         <div className="diagnostic-findings">
           {pdfError && <ClinicalAlert type="critical">{pdfError}</ClinicalAlert>}
           {result.ai_error_message && <ClinicalAlert type="warning">{result.ai_error_message}</ClinicalAlert>}
-          <ConfidenceBar value={confidence} />
+          <ConfidenceBar value={confidence} language={language} />
           <div className="finding-list">
             <div>
               <Icon name="activity" />
-              <span>Conclusion IA</span>
-              <strong>{predictionLabel(result)}</strong>
+              <span>{t.conclusionIA}</span>
+              <strong>{predictionLabel(result, language)}</strong>
             </div>
             <div>
               <Icon name="shield" />
-              <span>Pipeline</span>
-              <strong>{statusLabel(result)}</strong>
+              <span>{t.pipeline}</span>
+              <strong>{statusLabel(result, language)}</strong>
             </div>
             <div>
               <Icon name="chart" />
-              <span>Performance</span>
-              <strong>{result.ai_latency_ms ? `${result.ai_latency_ms} ms` : "Latence N/R"}</strong>
+              <span>{t.performance}</span>
+              <strong>{result.ai_latency_ms ? `${result.ai_latency_ms} ms` : (language === "ar" ? "الاستجابة غير متوفرة" : "Latence N/R")}</strong>
             </div>
             <div>
               <Icon name="patients" />
-              <span>Responsable</span>
-              <strong>{roleLabel(user.role)}</strong>
+              <span>{t.responsible}</span>
+              <strong>{roleLabel(user.role, language)}</strong>
             </div>
           </div>
         </div>
-        <ScanViewer image={result} />
+        <ScanViewer image={result} language={language} />
       </div>
     </article>
   );
 });
 
-function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze: () => void }) {
+function PatientTable({ images, language = "fr", onAnalyze }: { images: MedicalImage[]; language?: "fr" | "ar"; onAnalyze: () => void }) {
+  const t = dashboardTranslations[language];
+
   if (!images.length) {
     return (
       <div className="empty-state clinical-empty-state">
         <Icon name="patients" />
-        <strong>Aucune analyse dans la session</strong>
-        <small>Importez une image medicale pour creer une ligne d'analyse.</small>
+        <strong>{t.noAnalysis}</strong>
+        <small>{t.importPrompt}</small>
         <button onClick={onAnalyze} type="button">
           <Icon name="plus" />
-          Nouvelle analyse
+          {t.newAnalysis}
         </button>
       </div>
     );
@@ -856,21 +1095,21 @@ function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze
         <thead>
           <tr>
             <th>
-              Analyse ID <Icon name="chevronDown" />
+              {t.analysisId} <Icon name="chevronDown" />
             </th>
             <th>
-              Examen <Icon name="chevronDown" />
+              {t.exam} <Icon name="chevronDown" />
             </th>
             <th>
-              Date <Icon name="chevronDown" />
+              {t.date} <Icon name="chevronDown" />
             </th>
             <th>
-              Statut <Icon name="chevronDown" />
+              {t.status} <Icon name="chevronDown" />
             </th>
             <th>
-              Resultat <Icon name="chevronDown" />
+              {t.result} <Icon name="chevronDown" />
             </th>
-            <th>Confiance</th>
+            <th>{t.confidence}</th>
           </tr>
         </thead>
         <tbody>
@@ -878,14 +1117,14 @@ function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze
             <tr key={image.id}>
               <td className="mono">PFD-{String(image.id).padStart(5, "0")}</td>
               <td>{image.original_filename}</td>
-              <td>{formatDate(image.created_at)}</td>
+              <td>{formatDate(image.created_at, language)}</td>
               <td>
                 <span className={`status-pill ${image.ai_analysis_status === "failed" ? "warning" : image.status === "analyzed" ? "active" : "inactive"}`}>
-                  {statusLabel(image)}
+                  {statusLabel(image, language)}
                 </span>
               </td>
               <td>
-                <SeverityBadge severity={getSeverity(image)} />
+                <SeverityBadge severity={getSeverity(image)} language={language} />
               </td>
               <td className="mono">{confidencePercent(image)}%</td>
             </tr>
@@ -896,23 +1135,25 @@ function PatientTable({ images, onAnalyze }: { images: MedicalImage[]; onAnalyze
   );
 }
 
-function historyStatusLabel(status: AnalysisHistory["analysis_status"]) {
-  const labels: Record<AnalysisHistory["analysis_status"], string> = {
-    pending: "En attente",
-    completed: "Terminee",
-    failed: "Echouee"
+function historyStatusLabel(status: AnalysisHistory["analysis_status"], language: "fr" | "ar" = "fr") {
+  const labels: Record<AnalysisHistory["analysis_status"], { fr: string; ar: string }> = {
+    pending: { fr: "En attente", ar: "قيد الانتظار" },
+    completed: { fr: "Terminée", ar: "مكتمل" },
+    failed: { fr: "Échouée", ar: "فشل" }
   };
-  return labels[status];
+  return labels[status] ? labels[status][language] : status;
 }
 
-function HistoryTable({ page }: { page: HistoryPage | null }) {
+function HistoryTable({ page, language = "fr" }: { page: HistoryPage | null; language?: "fr" | "ar" }) {
   const items = page?.items ?? [];
+  const t = dashboardTranslations[language];
+
   if (!items.length) {
     return (
       <div className="empty-state clinical-empty-state">
         <Icon name="patients" />
-        <strong>Aucun historique disponible</strong>
-        <small>Les analyses terminees apparaitront ici avec leurs metadonnees.</small>
+        <strong>{t.noHistory}</strong>
+        <small>{t.historyPrompt}</small>
       </div>
     );
   }
@@ -922,29 +1163,43 @@ function HistoryTable({ page }: { page: HistoryPage | null }) {
       <table className="clinical-table">
         <thead>
           <tr>
-            <th>Analyse</th>
-            <th>Date</th>
-            <th>Statut</th>
-            <th>Diagnostic</th>
-            <th>Confiance</th>
-            <th>Severite</th>
-            <th>Ambigu</th>
+            <th>{language === "ar" ? "التحليل" : "Analyse"}</th>
+            <th>{t.date}</th>
+            <th>{t.status}</th>
+            <th>{language === "ar" ? "التشخيص" : "Diagnostic"}</th>
+            <th>{t.confidence}</th>
+            <th>{language === "ar" ? "مستوى الخطورة" : "Sévérité"}</th>
+            <th>{t.ambiguous}</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
             <tr key={item.id}>
               <td>{item.original_filename}</td>
-              <td>{formatDate(item.created_at)}</td>
+              <td>{formatDate(item.created_at, language)}</td>
               <td>
                 <span className={`status-pill ${item.analysis_status === "failed" ? "warning" : item.analysis_status === "completed" ? "active" : "inactive"}`}>
-                  {historyStatusLabel(item.analysis_status)}
+                  {historyStatusLabel(item.analysis_status, language)}
                 </span>
               </td>
-              <td>{item.prediction ?? "N/R"}</td>
-              <td className="mono">{item.confidence != null ? `${Math.round(item.confidence * 100)}%` : "N/R"}</td>
-              <td>{item.severity ?? "N/R"}</td>
-              <td>{item.is_ambiguous ? "Oui" : "Non"}</td>
+              <td>
+                {item.prediction === "PNEUMONIA" 
+                  ? (language === "ar" ? "التهاب رئوي" : "PNEUMONIA") 
+                  : item.prediction === "NORMAL" 
+                    ? (language === "ar" ? "سليم" : "NORMAL") 
+                    : (language === "ar" ? "غير متوفر" : "N/R")}
+              </td>
+              <td className="mono">{item.confidence != null ? `${Math.round(item.confidence * 100)}%` : (language === "ar" ? "غير متوفر" : "N/R")}</td>
+              <td>
+                {item.severity === "critical" 
+                  ? (language === "ar" ? "حرجة" : "Critique") 
+                  : item.severity === "suspect" 
+                    ? (language === "ar" ? "مشتبه به" : "Suspect") 
+                    : item.severity === "normal" 
+                      ? (language === "ar" ? "سليم" : "Normal") 
+                      : (language === "ar" ? "غير متوفر" : "N/R")}
+              </td>
+              <td>{item.is_ambiguous ? t.yes : t.no}</td>
             </tr>
           ))}
         </tbody>
@@ -961,7 +1216,8 @@ function NotificationCenter({
   onToggleOpen,
   onToggleRead,
   onTogglePreference,
-  onRefresh
+  onRefresh,
+  language = "fr"
 }: {
   notifications: AppNotification[];
   preference: NotificationPreference | null;
@@ -971,7 +1227,9 @@ function NotificationCenter({
   onToggleRead: (notification: AppNotification) => void;
   onTogglePreference: () => void;
   onRefresh: () => void;
+  language?: "fr" | "ar";
 }) {
+  const t = dashboardTranslations[language];
   const unreadCount = notifications.filter((notification) => !notification.is_read).length;
 
   return (
@@ -982,20 +1240,20 @@ function NotificationCenter({
       </button>
 
       {open && (
-        <section className="notification-popover" aria-label="Historique des notifications">
+        <section className="notification-popover" aria-label={language === "ar" ? "سجل التنبيهات" : "Historique des notifications"}>
           <div className="notification-popover-header">
             <div>
               <p className="section-kicker">Notifications</p>
-              <h2>Historique</h2>
+              <h2>{language === "ar" ? "السجل" : "Historique"}</h2>
             </div>
             <button className="secondary" onClick={onRefresh} type="button">
-              Actualiser
+              {t.refresh}
             </button>
           </div>
 
           <label className="notification-toggle">
             <input checked={preference?.notifications_enabled ?? true} onChange={onTogglePreference} type="checkbox" />
-            Notifications actives
+            {t.activeNotifications}
           </label>
 
           <div className="notification-list">
@@ -1006,18 +1264,18 @@ function NotificationCenter({
                 <article className={`notification-item ${notification.category} ${notification.is_read ? "read" : "unread"}`} key={notification.id}>
                   <div>
                     <strong>{notification.title}</strong>
-                    <small>{formatDate(notification.created_at)}</small>
+                    <small>{formatDate(notification.created_at, language)}</small>
                   </div>
                   <p>{notification.message}</p>
                   <button className="secondary" onClick={() => onToggleRead(notification)} type="button">
-                    {notification.is_read ? "Non lu" : "Lu"}
+                    {notification.is_read ? t.unread : t.read}
                   </button>
                 </article>
               ))
             ) : (
               <div className="empty-state clinical-empty-state notification-empty-state">
                 <Icon name="bell" />
-                <strong>Aucune notification</strong>
+                <strong>{t.noNotification}</strong>
               </div>
             )}
           </div>
@@ -1027,8 +1285,10 @@ function NotificationCenter({
   );
 }
 
-export function DashboardPage({ user, onLogout }: Props) {
+export function DashboardPage({ user, language, onLanguageChange, onLogout }: Props) {
   const [activePanel, setActivePanel] = useState<PanelId>(() => routeToPanel(window.location.pathname));
+  const t = dashboardTranslations[language];
+  const [consentActive, setConsentActive] = useState(user.consent_granted);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedImages, setUploadedImages] = useState<MedicalImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -1050,6 +1310,20 @@ export function DashboardPage({ user, onLogout }: Props) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationPreference, setNotificationPreference] = useState<NotificationPreference | null>(null);
+
+  const [adminSearch, setAdminSearch] = useState("");
+
+  async function handleGrantConsent() {
+    try {
+      await grantConsent();
+      setConsentActive(true);
+      user.consent_granted = true;
+      setSuccess(language === "ar" ? "تم تقديم الموافقة بنجاح." : "Consentement donné avec succès.");
+      loadDashboardStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors du consentement");
+    }
+  }
 
   useEffect(() => {
     function handleRouteChange() {
@@ -1107,7 +1381,7 @@ export function DashboardPage({ user, onLogout }: Props) {
 
   async function handleUpload() {
     if (!selectedFiles.length) {
-      setError("Selectionnez au moins une image medicale.");
+      setError(language === "ar" ? "الرجاء اختيار صورة طبية واحدة على الأقل." : "Sélectionnez au moins une image médicale.");
       return;
     }
 
@@ -1125,16 +1399,26 @@ export function DashboardPage({ user, onLogout }: Props) {
       const aiFailures = response.images.filter((image) => image.ai_analysis_status === "failed");
       if (aiFailures.length) {
         setWarning(
-          `${response.images.length} fichier${response.images.length > 1 ? "s" : ""} importe${response.images.length > 1 ? "s" : ""}. ` +
-            `Le modele IA est indisponible pour ${aiFailures.length} analyse${aiFailures.length > 1 ? "s" : ""}.`
+          language === "ar"
+            ? `تم استيراد ${response.images.length} ملف(ات). نموذج الذكاء الاصطناعي غير متوفر لـ ${aiFailures.length} تحليل(ات).`
+            : `${response.images.length} fichier${response.images.length > 1 ? "s" : ""} importé${response.images.length > 1 ? "s" : ""}. ` +
+              `Le modèle IA est indisponible pour ${aiFailures.length} analyse${aiFailures.length > 1 ? "s" : ""}.`
         );
       } else {
-        setSuccess(`${response.images.length} fichier${response.images.length > 1 ? "s" : ""} importe${response.images.length > 1 ? "s" : ""} avec succes.`);
+        setSuccess(
+          language === "ar"
+            ? `تم استيراد ${response.images.length} ملف(ات) بنجاح.`
+            : `${response.images.length} fichier${response.images.length > 1 ? "s" : ""} importé${response.images.length > 1 ? "s" : ""} avec succès.`
+        );
       }
       setSelectedFiles([]);
       navigateTo("results");
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Echec de l'import");
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : (language === "ar" ? "فشل الاستيراد" : "Échec de l'import")
+      );
     } finally {
       setUploading(false);
     }
@@ -1230,7 +1514,7 @@ export function DashboardPage({ user, onLogout }: Props) {
     try {
       await exportHistoryCsv(historyFilters);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Impossible d'exporter l'historique CSV");
+      setError(err instanceof Error ? err.message : (language === "ar" ? "فشل تصدير سجل التحاليل بصيغة CSV" : "Impossible d'exporter l'historique CSV"));
     } finally {
       setHistoryExporting(false);
     }
@@ -1238,12 +1522,16 @@ export function DashboardPage({ user, onLogout }: Props) {
 
   function renderOverview() {
     const metrics = [
-      { label: "Examens total", value: totalExams, trend: statsLoading ? "Chargement" : "API", tone: "positive" },
-      { label: "Analyses terminees", value: analyzedCount, trend: "Stable", tone: "neutral" },
-      { label: "Cas critiques", value: criticalCount, trend: criticalCount ? "A reviser" : "0 alerte", tone: criticalCount ? "critical" : "positive" },
-      { label: "Normaux", value: normalCount, trend: "Automatise", tone: "positive" }
+      { label: t.totalExams, value: totalExams, trend: statsLoading ? t.loading : t.api, tone: "positive" },
+      { label: t.completedAnalyses, value: analyzedCount, trend: t.stable, tone: "neutral" },
+      { label: t.criticalCases, value: criticalCount, trend: criticalCount ? t.toReview : t.zeroAlert, tone: criticalCount ? "critical" : "positive" },
+      { label: t.normals, value: normalCount, trend: t.automated, tone: "positive" }
     ];
     const severityLabels = dashboardStats?.severity_breakdown.map((item) => item.label) ?? ["Normal", "Suspect", "Critical", "Pending"];
+    const translatedSeverityLabels = severityLabels.map(label => {
+      const normalized = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+      return severityLabelMap[normalized]?.[language] ?? label;
+    });
     const severityValues = dashboardStats?.severity_breakdown.map((item) => item.value) ?? [
       normalCount,
       displayedImages.filter((image) => getSeverity(image) === "Suspect").length,
@@ -1251,6 +1539,9 @@ export function DashboardPage({ user, onLogout }: Props) {
       displayedImages.filter((image) => image.status !== "analyzed").length
     ];
     const statusLabels = dashboardStats?.status_breakdown.map((item) => item.label) ?? ["uploaded", "validated", "anonymized", "analyzed"];
+    const translatedStatusLabels = statusLabels.map(label => {
+      return statusLabelMap[label]?.[language] ?? label;
+    });
     const statusValues = dashboardStats?.status_breakdown.map((item) => item.value) ?? [
       displayedImages.filter((image) => image.status === "uploaded").length,
       displayedImages.filter((image) => image.status === "validated").length,
@@ -1275,15 +1566,15 @@ export function DashboardPage({ user, onLogout }: Props) {
         <div className="dashboard-chart-grid">
           <DashboardChart
             colors={["#10b981", "#f59e0b", "#ef4444", "#64748b"]}
-            labels={severityLabels}
-            title="Répartition des diagnostics"
+            labels={translatedSeverityLabels}
+            title={t.diagnosticsRepartition}
             type="doughnut"
             values={severityValues}
           />
           <DashboardChart
             colors={["#94a3b8", "#38bdf8", "#14b8a6", "#2563eb", "#f97316"]}
-            labels={statusLabels}
-            title="Statuts du pipeline"
+            labels={translatedStatusLabels}
+            title={t.pipelineStatus}
             type="bar"
             values={statusValues}
           />
@@ -1291,41 +1582,41 @@ export function DashboardPage({ user, onLogout }: Props) {
 
         <section className="clinical-panel overview-profile-panel">
           <div>
-            <p className="section-kicker">Session clinique</p>
-            <h2>Diagnostic pulmonaire assiste par IA</h2>
+            <p className="section-kicker">{language === "ar" ? "الجلسة السريرية" : "Session clinique"}</p>
+            <h2>{t.lungsAssist}</h2>
           </div>
           <div className="profile-data-grid">
             <span>
-              Utilisateur
+              {t.user}
               <strong>{user.full_name}</strong>
             </span>
             <span>
-              Role
-              <strong>{roleLabel(user.role)}</strong>
+              {t.role}
+              <strong>{roleLabel(user.role, language)}</strong>
             </span>
             <span>
-              Email
+              {t.email}
               <strong>{user.email}</strong>
             </span>
             <span>
-              Acces
-              <strong>{user.is_active ? "Actif" : "Inactif"}</strong>
+              {t.access}
+              <strong>{user.is_active ? t.active : t.inactive}</strong>
             </span>
           </div>
-          <ClinicalAlert type="info">Les resultats IA doivent etre relus par un professionnel de sante autorise.</ClinicalAlert>
+          <ClinicalAlert type="info">{t.disclaimer}</ClinicalAlert>
         </section>
 
         <section className="clinical-panel">
           <div className="panel-heading-row">
             <div>
-              <p className="section-kicker">Analysis history</p>
-              <h2>Analyses recentes</h2>
+              <p className="section-kicker">{language === "ar" ? "سجل التحاليل" : "Analysis history"}</p>
+              <h2>{t.recentAnalysesTitle}</h2>
             </div>
             <button className="secondary" onClick={() => navigateTo("patients")} type="button">
-              Voir tout
+              {t.viewAll}
             </button>
           </div>
-          <PatientTable images={recentAnalyses} onAnalyze={() => navigateTo("intake")} />
+          <PatientTable images={recentAnalyses} language={language} onAnalyze={() => navigateTo("intake")} />
         </section>
       </div>
     );
@@ -1335,8 +1626,8 @@ export function DashboardPage({ user, onLogout }: Props) {
     return (
       <section className="clinical-panel intake-panel">
         <div>
-          <p className="section-kicker">Secure intake</p>
-          <h2>Importer des images medicales</h2>
+          <p className="section-kicker">{t.secureIntake}</p>
+          <h2>{t.importImages}</h2>
         </div>
 
         <label className="dropzone" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
@@ -1347,9 +1638,9 @@ export function DashboardPage({ user, onLogout }: Props) {
             type="file"
           />
           <Icon name="upload" />
-          <span>Depot securise</span>
-          <strong>{selectedFiles.length ? `${selectedFiles.length} selectionne${selectedFiles.length > 1 ? "s" : ""}` : "Choisir des images medicales"}</strong>
-          <small>DICOM, PNG ou JPEG. Les fichiers sont anonymises et chiffres au repos.</small>
+          <span>{t.secureDrop}</span>
+          <strong>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length > 1 ? t.selectedPluralSuffix : t.selectedSuffix}` : t.chooseImages}</strong>
+          <small>{t.dicomFormatNote}</small>
         </label>
 
         {selectedFiles.length > 0 && (
@@ -1357,7 +1648,7 @@ export function DashboardPage({ user, onLogout }: Props) {
             {selectedFiles.map((file) => (
               <li key={`${file.name}-${file.size}`}>
                 <span>{file.name}</span>
-                <small>{Math.ceil(file.size / 1024)} Ko</small>
+                <small>{Math.ceil(file.size / 1024)} {language === "ar" ? "كيلو بايت" : "Ko"}</small>
               </li>
             ))}
           </ul>
@@ -1365,7 +1656,7 @@ export function DashboardPage({ user, onLogout }: Props) {
 
         <div className="upload-actions">
           <button disabled={uploading} onClick={handleUpload} type="button">
-            {uploading ? "Import en cours..." : "Importer et analyser"}
+            {uploading ? t.importInProgress : t.importAndAnalyze}
           </button>
           <div aria-label="Progression de l'import" className="progress-track">
             <span style={{ width: `${uploadProgress}%` }} />
@@ -1385,11 +1676,11 @@ export function DashboardPage({ user, onLogout }: Props) {
       return (
         <div className="empty-state clinical-empty-state">
           <Icon name="fileText" />
-          <strong>Aucun rapport disponible</strong>
-          <small>Importez un examen pour generer une carte de resultat diagnostic.</small>
+          <strong>{t.noReport}</strong>
+          <small>{t.intakePrompt}</small>
           <button onClick={() => navigateTo("intake")} type="button">
             <Icon name="plus" />
-            Lancer une analyse
+            {t.startAnalysis}
           </button>
         </div>
       );
@@ -1399,100 +1690,133 @@ export function DashboardPage({ user, onLogout }: Props) {
       <div className="results-stack">
         {warning && <ClinicalAlert type="warning">{warning}</ClinicalAlert>}
         {uploadedImages.map((image) => (
-          <DiagnosticResultCard image={image} key={image.id} user={user} />
+          <DiagnosticResultCard image={image} key={image.id} user={user} language={language} />
         ))}
       </div>
     );
   }
 
   function renderAdmin() {
+    const filteredUsers = users.filter((u) => {
+      const term = adminSearch.toLowerCase();
+      return (
+        u.full_name.toLowerCase().includes(term) ||
+        u.email.toLowerCase().includes(term)
+      );
+    });
+
     return (
-      <div className="admin-grid">
-        <section className="clinical-panel users-management">
-          <div className="panel-heading-row">
-            <div>
-              <p className="section-kicker">Access control</p>
-              <h2>Utilisateurs</h2>
+      <div className="settings-dashboard-grid">
+        <div className="settings-main-column">
+          <section className="clinical-panel">
+            <div className="panel-heading-row" style={{ marginBottom: "16px" }}>
+              <div>
+                <p className="section-kicker">{language === "ar" ? "إدارة الوصول" : "Access control"}</p>
+                <h2>{t.users}</h2>
+              </div>
+              <button className="secondary" onClick={loadUsers} type="button">
+                {t.refresh}
+              </button>
             </div>
-            <button className="secondary" onClick={loadUsers} type="button">
-              Actualiser
-            </button>
-          </div>
 
-          {usersError && <ClinicalAlert type="critical">{usersError}</ClinicalAlert>}
+            <div className="settings-search-bar">
+              <input
+                type="text"
+                placeholder={language === "ar" ? "البحث بالاسم أو البريد..." : "Rechercher par nom ou email..."}
+                value={adminSearch}
+                onChange={(e) => setAdminSearch(e.target.value)}
+              />
+            </div>
 
-          <div className="clinical-table-wrap">
-            <table className="clinical-table">
-              <thead>
-                <tr>
-                  <th>Nom complet</th>
-                  <th>Adresse e-mail</th>
-                  <th>Role</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersLoading ? (
-                  Array.from({ length: 4 }).map((_, index) => (
-                    <tr key={index}>
-                      <td colSpan={4}>
-                        <div className="table-skeleton" />
-                      </td>
-                    </tr>
-                  ))
-                ) : users.length > 0 ? (
-                  users.map((managedUser) => (
-                    <tr key={managedUser.id}>
-                      <td>{managedUser.full_name}</td>
-                      <td>{managedUser.email}</td>
-                      <td>{roleLabel(managedUser.role)}</td>
-                      <td>
-                        <span className={managedUser.is_active ? "status-pill active" : "status-pill inactive"}>
-                          {managedUser.is_active ? "Actif" : "Inactif"}
+            {usersError && <ClinicalAlert type="critical">{usersError}</ClinicalAlert>}
+
+            {usersLoading ? (
+              <div className="table-skeleton" style={{ height: "200px" }} />
+            ) : filteredUsers.length > 0 ? (
+              <div className="user-cards-grid">
+                {filteredUsers.map((managedUser) => {
+                  const initials = managedUser.full_name.trim().split(" ").map(w => w.charAt(0)).join("").toUpperCase().slice(0, 2) || "U";
+                  const isActive = managedUser.is_active;
+
+                  return (
+                    <article className="user-profile-card" key={managedUser.id}>
+                      <div className="user-card-header">
+                        <div className={`user-avatar-circle role-${managedUser.role}`}>
+                          {initials}
+                        </div>
+                        <div className="user-card-identity">
+                          <strong>{managedUser.full_name}</strong>
+                          <span>{managedUser.email}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="user-card-badges">
+                        <span className={`status-pill ${isActive ? "active" : "inactive"}`}>
+                          {isActive ? t.active : t.inactive}
                         </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4}>Aucun utilisateur disponible.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-state clinical-empty-state">
+                <Icon name="patients" />
+                <strong>{language === "ar" ? "لا يوجد مستخدمون مطابقة." : "Aucun utilisateur trouvé."}</strong>
+              </div>
+            )}
+          </section>
+        </div>
 
-        <section className="clinical-panel create-user-panel">
-          <div>
-            <p className="section-kicker">New account</p>
-            <h2>Ajouter un utilisateur</h2>
-          </div>
-          <RegisterPage mode="admin" onRegistered={loadUsers} />
-        </section>
+        <div className="settings-sidebar-column">
+          <section className="clinical-panel create-user-panel" style={{ borderTop: 0, paddingTop: 0 }}>
+            <div style={{ marginBottom: "16px" }}>
+              <h2>{t.addUser}</h2>
+            </div>
+            <RegisterPage mode="admin" language={language} onRegistered={loadUsers} />
+          </section>
+        </div>
       </div>
     );
   }
 
   function renderPage(panel: PanelId) {
+    if (!consentActive) {
+      return (
+        <div className="clinical-empty-state empty-state" style={{ padding: "48px 24px", maxWidth: "600px", margin: "40px auto", textAlign: "center" }}>
+          <Icon name="shield" />
+          <strong style={{ fontSize: "1.4rem", display: "block", margin: "16px 0 8px" }}>
+            {language === "ar" ? "الموافقة على معالجة البيانات مطلوبة" : "Consentement requis"}
+          </strong>
+          <p style={{ color: "#64748b", margin: "0 0 24px 0", lineHeight: "1.5" }}>
+            {language === "ar" 
+              ? "الموافقة على معالجة البيانات الصحية مطلوبة للوصول إلى لوحة التحكم والتشخيص. يرجى تقديم موافقتك للمتابعة." 
+              : "Le consentement au traitement des données de santé est obligatoire pour utiliser le poste de diagnostic. Veuillez accorder votre consentement pour continuer."}
+          </p>
+          <button className="primary" onClick={handleGrantConsent} type="button" style={{ padding: "10px 24px", fontSize: "1rem" }}>
+            {language === "ar" ? "تقديم الموافقة" : "Donner mon consentement"}
+          </button>
+        </div>
+      );
+    }
     if (panel === "overview") return renderOverview();
     if (panel === "patients") {
       return (
         <section className="clinical-panel">
           <div className="panel-heading-row">
             <div>
-              <p className="section-kicker">Analysis history</p>
-              <h2>Historique des analyses</h2>
+              <p className="section-kicker">{t.analysisHistory}</p>
+              <h2>{t.analysisHistory}</h2>
             </div>
             <button className="secondary" disabled={historyExporting} onClick={handleHistoryExport} type="button">
-              {historyExporting ? "Export..." : "Exporter CSV"}
+              {historyExporting ? (language === "ar" ? "تصدير..." : "Export...") : t.exportCsv}
             </button>
           </div>
           <div className="history-filters">
             <input
               aria-label="Recherche historique"
               onChange={(event) => updateHistoryFilters({ search: event.target.value })}
-              placeholder="Rechercher fichier"
+              placeholder={t.searchPlaceholder}
               type="search"
               value={historyFilters.search ?? ""}
             />
@@ -1501,29 +1825,29 @@ export function DashboardPage({ user, onLogout }: Props) {
               onChange={(event) => updateHistoryFilters({ status: event.target.value as HistoryFilters["status"] })}
               value={historyFilters.status ?? ""}
             >
-              <option value="">Tous statuts</option>
-              <option value="completed">Terminees</option>
-              <option value="pending">En attente</option>
-              <option value="failed">Echouees</option>
+              <option value="">{t.allStatuses}</option>
+              <option value="completed">{language === "ar" ? "مكتملة" : "Terminees"}</option>
+              <option value="pending">{language === "ar" ? "قيد الانتظار" : "En attente"}</option>
+              <option value="failed">{language === "ar" ? "فشلت" : "Echouees"}</option>
             </select>
             <select
               aria-label="Filtrer par diagnostic"
               onChange={(event) => updateHistoryFilters({ prediction: event.target.value })}
               value={historyFilters.prediction ?? ""}
             >
-              <option value="">Tous diagnostics</option>
-              <option value="PNEUMONIA">Pneumonie</option>
-              <option value="NORMAL">Normal</option>
+              <option value="">{t.allDiagnostics}</option>
+              <option value="PNEUMONIA">{language === "ar" ? "التهاب رئوي" : "Pneumonie"}</option>
+              <option value="NORMAL">{language === "ar" ? "سليم" : "Normal"}</option>
             </select>
             <select
               aria-label="Filtrer par severite"
               onChange={(event) => updateHistoryFilters({ severity: event.target.value })}
               value={historyFilters.severity ?? ""}
             >
-              <option value="">Toutes severites</option>
-              <option value="critical">Critique</option>
-              <option value="suspect">Suspect</option>
-              <option value="normal">Normal</option>
+              <option value="">{t.allSeverities}</option>
+              <option value="critical">{language === "ar" ? "حرجة" : "Critique"}</option>
+              <option value="suspect">{language === "ar" ? "مشتبه به" : "Suspect"}</option>
+              <option value="normal">{language === "ar" ? "سليم" : "Normal"}</option>
             </select>
             <label className="history-checkbox">
               <input
@@ -1531,15 +1855,15 @@ export function DashboardPage({ user, onLogout }: Props) {
                 onChange={(event) => updateHistoryFilters({ ambiguous: event.target.checked ? true : "" })}
                 type="checkbox"
               />
-              Ambigus
+              {t.ambiguous}
             </label>
           </div>
           {error && <ClinicalAlert type="critical">{error}</ClinicalAlert>}
           {historyError && <ClinicalAlert type="critical">{historyError}</ClinicalAlert>}
-          {historyLoading ? <div className="table-skeleton" /> : <HistoryTable page={historyPage} />}
+          {historyLoading ? <div className="table-skeleton" /> : <HistoryTable page={historyPage} language={language} />}
           <div className="history-pagination">
             <span className="mono">
-              Page {historyPage?.page ?? historyFilters.page ?? 1} / {historyPage?.total_pages ?? 0}
+              {t.page} {historyPage?.page ?? historyFilters.page ?? 1} / {historyPage?.total_pages ?? 0}
             </span>
             <div>
               <button
@@ -1548,7 +1872,7 @@ export function DashboardPage({ user, onLogout }: Props) {
                 onClick={() => setHistoryPageNumber((historyPage?.page ?? 1) - 1)}
                 type="button"
               >
-                Prec.
+                {t.prev}
               </button>
               <button
                 className="secondary"
@@ -1556,7 +1880,7 @@ export function DashboardPage({ user, onLogout }: Props) {
                 onClick={() => setHistoryPageNumber((historyPage?.page ?? 1) + 1)}
                 type="button"
               >
-                Suiv.
+                {t.next}
               </button>
             </div>
           </div>
@@ -1571,10 +1895,10 @@ export function DashboardPage({ user, onLogout }: Props) {
   const visiblePages = dashboardPages.filter((page) => !page.adminOnly || user.role === "admin");
   const activePage = visiblePages.find((page) => page.id === activePanel) ?? visiblePages[0];
   const userInitial = user.full_name.trim().charAt(0).toUpperCase() || "U";
-  const patientBadge = latestImage ? `PFD-${String(latestImage.id).padStart(5, "0")}` : "Aucune analyse";
+  const patientBadge = latestImage ? `PFD-${String(latestImage.id).padStart(5, "0")}` : t.noAnalysis;
 
   return (
-    <main className="clinical-shell">
+    <main className="clinical-shell" dir={language === "ar" ? "rtl" : "ltr"}>
       <aside className="clinical-sidebar">
         <div className="clinical-brand">
           <span>
@@ -1582,25 +1906,25 @@ export function DashboardPage({ user, onLogout }: Props) {
           </span>
           <div>
             <strong>PulmoDiag AI</strong>
-            <small>Diagnostic Workstation</small>
+            <small>{language === "ar" ? "محطة التشخيص" : "Diagnostic Workstation"}</small>
           </div>
         </div>
 
-        <nav className="clinical-side-menu" aria-label="Navigation du tableau de bord">
-          <span className="sidebar-section-label">Workspace</span>
+        <nav className="clinical-side-menu" aria-label={language === "ar" ? "التنقل في لوحة التحكم" : "Navigation du tableau de bord"}>
+          <span className="sidebar-section-label">{t.workspace}</span>
           {visiblePages.map((page) => (
             <button className={activePanel === page.id ? "active" : ""} key={page.id} onClick={() => navigateTo(page.id)} type="button">
               <Icon name={page.icon} />
-              <span>{page.title}</span>
+              <span>{dashboardTranslations[language][page.id] || page.title}</span>
             </button>
           ))}
         </nav>
 
-        <div className="sidebar-user-card" aria-label="Utilisateur connecte">
+        <div className="sidebar-user-card" aria-label={language === "ar" ? "المستخدم المتصل" : "Utilisateur connecte"}>
           <span>{userInitial}</span>
           <div>
             <strong>{user.full_name}</strong>
-            <small>{roleLabel(user.role)}</small>
+            <small>{roleLabel(user.role, language)}</small>
           </div>
         </div>
       </aside>
@@ -1615,12 +1939,37 @@ export function DashboardPage({ user, onLogout }: Props) {
           </div>
 
           <div className="clinical-breadcrumb">
-            <span>Diagnostic pulmonaire assiste par IA</span>
-            <h1>{activePage.title}</h1>
+            <span>{t.lungsAssist}</span>
+            <h1>{dashboardTranslations[language][activePage.id] || activePage.title}</h1>
           </div>
 
           <div className="clinical-top-actions">
             <span className="patient-id-badge">{patientBadge}</span>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", margin: "0 4px" }} className="dashboard-language-selector">
+              <button
+                type="button"
+                onClick={() => onLanguageChange("fr")}
+                className={`lang-select-btn ${language === "fr" ? "active" : ""}`}
+                title="Passer en Français"
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                <img src="/france.svg" alt="FR" style={{ width: "16px", height: "11px", objectFit: "cover", borderRadius: "1px" }} />
+                <span>FR</span>
+              </button>
+              <span className="lang-divider">|</span>
+              <button
+                type="button"
+                onClick={() => onLanguageChange("ar")}
+                className={`lang-select-btn ${language === "ar" ? "active" : ""}`}
+                title="التحويل إلى العربية"
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                <img src="/tunisia.svg" alt="AR" style={{ width: "16px", height: "11px", objectFit: "cover", borderRadius: "1px" }} />
+                <span>AR</span>
+              </button>
+            </div>
+
             <NotificationCenter
               loading={notificationsLoading}
               notifications={notifications}
@@ -1630,11 +1979,12 @@ export function DashboardPage({ user, onLogout }: Props) {
               onToggleRead={handleNotificationReadToggle}
               open={notificationsOpen}
               preference={notificationPreference}
+              language={language}
             />
-            <span className="doctor-avatar" aria-label={`Docteur ${user.full_name}`}>
+            <span className="doctor-avatar" aria-label={language === "ar" ? `الطبيب ${user.full_name}` : `Docteur ${user.full_name}`}>
               {userInitial}
             </span>
-            <button className="icon-button destructive" aria-label="Deconnexion" onClick={onLogout} type="button">
+            <button className="icon-button destructive" aria-label={language === "ar" ? "تسجيل الخروج" : "Deconnexion"} onClick={onLogout} type="button">
               <Icon name="logout" />
             </button>
           </div>

@@ -9,6 +9,15 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [hasAdmin, setHasAdmin] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [language, setLanguage] = useState<"fr" | "ar">(() => {
+    const saved = localStorage.getItem("pfd_lang");
+    return (saved === "fr" || saved === "ar") ? saved : "fr";
+  });
+
+  const handleLanguageChange = (lang: "fr" | "ar") => {
+    setLanguage(lang);
+    localStorage.setItem("pfd_lang", lang);
+  };
 
   useEffect(() => {
     async function loadSession() {
@@ -42,22 +51,22 @@ export default function App() {
   }
 
   if (loading) {
-    return <div className="screen-center">Chargement de la session...</div>;
+    return <div className="screen-center">{language === "ar" ? "جاري تحميل الجلسة..." : "Chargement de la session..."}</div>;
   }
 
   const authShell = (content: ReactNode, variant: "setup" | "login" = "setup") => (
-    <main className={`auth-layout ${variant === "login" ? "evax-login-layout" : ""}`}>
+    <main className={`auth-layout ${variant === "login" ? "evax-login-layout" : ""}`} dir={language === "ar" ? "rtl" : "ltr"}>
       {variant === "login" ? (
         <section className="evax-auth-aside">
           <div className="signin-cover-image" aria-hidden="true" />
           <div className="evax-public-header">
-            <span>République Tunisienne</span>
-            <strong>Ministère de la Santé</strong>
+            <span>{language === "ar" ? "الجمهورية التونسية" : "République Tunisienne"}</span>
+            <strong>{language === "ar" ? "وزارة الصحة" : "Ministère de la Santé"}</strong>
           </div>
           <div className="evax-brand-copy">
             <span className="evax-mark">IA</span>
-            <h1>Plateforme d'Aide au Diagnostic Pulmonaire par IA</h1>
-            <p>Espace sécurisé pour les professionnels de santé autorisés.</p>
+            <h1>{language === "ar" ? "منصة المساعدة على التشخيص الرئوي بالذكاء الاصطناعي" : "Plateforme d'Aide au Diagnostic Pulmonaire par IA"}</h1>
+            <p>{language === "ar" ?  "فضاء آمن للإطار الطبي المرخص له " : "Espace sécurisé pour les professionnels de santé autorisés."}</p>
           </div>
         </section>
       ) : (
@@ -92,8 +101,8 @@ export default function App() {
   }
 
   if (user) {
-    return <DashboardPage user={user} onLogout={handleLogout} />;
+    return <DashboardPage user={user} language={language} onLanguageChange={handleLanguageChange} onLogout={handleLogout} />;
   }
 
-  return authShell(<LoginPage onLogin={setUser} />, "login");
+  return authShell(<LoginPage language={language} onLanguageChange={handleLanguageChange} onLogin={setUser} />, "login");
 }

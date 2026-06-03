@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=DM+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&display=swap");
 
 :root {
   --clinical-bg: #f7f9fc;
@@ -32,6 +32,12 @@
   --success-bg: #ecfdf5;
   --warning: #b45309;
   --font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+[dir="rtl"] {
+  --font-family: "Cairo", system-ui, -apple-system, sans-serif;
+  --heading-font: "Cairo", system-ui, -apple-system, sans-serif;
+  --label-font: "Cairo", system-ui, -apple-system, sans-serif;
 }
 
 * {
@@ -286,10 +292,46 @@ button.secondary:hover:not(:disabled) {
 .evax-login-topline {
   color: #64748b;
   display: flex;
+  align-items: center;
   font-size: 13px;
   font-weight: 700;
-  gap: 14px;
+  gap: 10px;
   justify-content: flex-end;
+}
+
+.lang-select-btn {
+  background: none !important;
+  border: none !important;
+  color: #64748b !important;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 !important;
+  min-height: auto !important;
+  transition: color 0.2s ease;
+}
+
+.lang-select-btn:hover {
+  color: var(--accent-hover) !important;
+}
+
+.lang-select-btn.active {
+  color: var(--accent-color) !important;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.lang-divider {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+[dir="rtl"] .signin-cover-image {
+  background:
+    linear-gradient(270deg, rgba(247, 250, 252, 0.94) 0%, rgba(247, 250, 252, 0.70) 42%, rgba(247, 250, 252, 0.18) 100%),
+    url("/auth-family-care.png") !important;
+  background-position: center !important;
+  background-size: cover !important;
 }
 
 .evax-login-title {
@@ -2857,5 +2899,131 @@ button.secondary:hover:not(:disabled) {
 
   .scan-viewer-panel {
     min-height: 280px;
+  }
+}
+
+/* Settings/Admin Dashboard Redesign Styles */
+.settings-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
+  gap: 24px;
+}
+
+.settings-search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--clinical-surface);
+  border: 1px solid var(--clinical-border);
+  border-radius: 8px;
+  padding: 2px 14px;
+  margin-bottom: 20px;
+  box-shadow: var(--clinical-shadow-sm);
+}
+
+.settings-search-bar input {
+  border: none !important;
+  box-shadow: none !important;
+  flex: 1;
+  font-size: 14px;
+  padding: 8px 4px;
+  outline: none;
+}
+
+.user-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.user-profile-card {
+  background: var(--clinical-surface);
+  border: 1px solid var(--clinical-border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: var(--clinical-shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.user-profile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--clinical-shadow-md);
+}
+
+.user-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.user-avatar-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.user-avatar-circle.role-admin {
+  background: linear-gradient(135deg, #f43f5e, #be123c);
+}
+
+.user-avatar-circle.role-doctor {
+  background: linear-gradient(135deg, #0ea5e9, #0369a1);
+}
+
+.user-avatar-circle.role-technician {
+  background: linear-gradient(135deg, #10b981, #047857);
+}
+
+.user-card-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-card-identity strong {
+  color: var(--clinical-ink);
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-card-identity span {
+  color: var(--clinical-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-card-badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* RTL Specific Tweaks for cards */
+[dir="rtl"] .user-profile-card {
+  text-align: right;
+}
+[dir="rtl"] .user-card-identity {
+  align-items: flex-start;
+}
+@media (max-width: 1024px) {
+  .settings-dashboard-grid {
+    grid-template-columns: 1fr;
   }
 }

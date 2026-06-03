@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_consent
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.medical_image import MedicalImage, MedicalImageStatus
@@ -77,7 +77,7 @@ def build_dashboard_stats(current_user: User, db: Session) -> DashboardStats:
 
 @router.get("/stats", response_model=DashboardStats)
 def read_dashboard_stats(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ) -> DashboardStats:
     cache_key = dashboard_stats_cache_key(current_user.id)

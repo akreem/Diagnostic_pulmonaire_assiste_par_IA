@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_consent
 from app.db.session import get_db
 from app.models.medical_image import MedicalImage
 from app.models.user import User
@@ -16,7 +16,7 @@ router = APIRouter()
 @router.get("/{image_id}/pdf")
 def download_report_pdf(
     image_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_consent),
     db: Session = Depends(get_db),
 ) -> Response:
     image = db.scalar(

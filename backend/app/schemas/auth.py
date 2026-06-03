@@ -8,6 +8,7 @@ class UserCreate(BaseModel):
     full_name: str = Field(min_length=2, max_length=255)
     password: str = Field(min_length=10, max_length=128)
     role: UserRole = UserRole.doctor
+    consent_granted: bool = True
 
 
 class UserRead(BaseModel):
@@ -16,6 +17,7 @@ class UserRead(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool
+    consent_granted: bool
 
     model_config = {"from_attributes": True}
 
@@ -27,6 +29,7 @@ class SetupStatus(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    consent_granted: bool = True
 
 
 class TokenResponse(BaseModel):

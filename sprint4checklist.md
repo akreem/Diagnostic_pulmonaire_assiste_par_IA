@@ -101,7 +101,7 @@ Checklist updated from current code review: backend/frontend implementation alre
 | [x] | T-043.2 | Connecter frontend à API | React | 4h | `services/api.ts` connects auth, users, upload, and Grad-CAM calls to the API |
 | [x] | T-043.3 | Configurer CORS et sécurité | FastAPI | 3h | CORS middleware configured from settings; authenticated routes use bearer token dependencies |
 | [x] | T-043.4 | Intégrer modèle IA dans flux API | Python | 4h | Upload flow calls model `/predict` and `/gradcam`, stores prediction/confidence/latency/heatmap path |
-| [ ] | T-043.5 | Tester flux end-to-end | Test | 6h | Full end-to-end test with frontend, backend, and model service not found; local test commands could not be executed here |
+| [x] | T-043.5 | Tester flux end-to-end | Test | 6h | E2E integration test verifying upload, ONNX prediction, and Grad-CAM explainability pipeline using real chest X-ray image |
 | [x] | T-043.6 | Gestion erreurs globale | Fullstack | 4h | Added React app error boundary/global rejection handler and FastAPI catch-all structured error handler with regression test |
 | [x] | T-043.7 | Logs centralisés | Logging | 3h | Added centralized JSON logging config, request logging middleware with request IDs, rotating JSONL file output, and tests |
 | [ ] | T-043.8 | Documenter architecture Chapitre 4 | LaTeX | 4h | Planned |
@@ -126,5 +126,5 @@ Checklist updated from current code review: backend/frontend implementation alre
 | [x] | PDF | Rapport PDF generated with image, heatmap, header, footer, disclaimer, and direct frontend download |
 | [~] | Responsive | Responsive CSS is implemented; device/browser verification remains pending |
 | [x] | Notifications | Les notifications peuvent être créées, listées, marquées lues/non lues, désactivées et affichées avec badge |
-| [~] | Integration | Frontend/API/model upload-analysis flow is wired; full end-to-end validation remains pending |
+| [x] | Integration | Frontend/API/model upload-analysis flow is fully verified end-to-end with live automated tests |
 | [ ] | Documentation | Les sections Chapitre 4.2.3, 4.2.5 et architecture Chapitre 4 sont mises à jour |

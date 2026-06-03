@@ -17,11 +17,13 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-analysis_history_status = sa.Enum("pending", "completed", "failed", name="analysishistorystatus")
+from sqlalchemy.dialects.postgresql import ENUM as PGEnum
+
+analysis_history_status = PGEnum("pending", "completed", "failed", name="analysishistorystatus", create_type=False)
 
 
 def upgrade() -> None:
-    analysis_history_status.create(op.get_bind(), checkfirst=True)
+    # analysis_history_status.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "analysis_history",
         sa.Column("id", sa.Integer(), nullable=False),

@@ -41,3 +41,12 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
     return current_user
+
+
+def require_consent(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.consent_granted:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Le consentement au traitement des données de santé est obligatoire pour cette opération.",
+        )
+    return current_user
