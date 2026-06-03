@@ -1,5 +1,5 @@
 services:
-  lungai_db:
+  db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: pfd
@@ -11,19 +11,29 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "5432"
+      - "5432:5432"
     volumes:
       - pfd_postgres_data:/var/lib/postgresql/data
-    networks:
-      - n8n-network
-  lungai_backend:
-    container_name: lungai-back
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "6379:6379"
+
+  backend:
     build:
       context: ./backend
     env_file:
       - .env
     depends_on:
-      lungai_db:
+      db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       model-service:
         condition: service_healthy
@@ -31,11 +41,9 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     ports:
-      - "8077:8000"
+      - "8000:8000"
     volumes:
       - ./backend:/app
-    networks:
-      - n8n-network
 
   model-service:
     build:
@@ -53,9 +61,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    networks:
-      - n8n-network
-  lungai_frontend:
+
+  frontend:
     build:
       context: ./frontend
     environment:
@@ -64,19 +71,13 @@ services:
       - VITE_HMR_PROTOCOL=${VITE_HMR_PROTOCOL:-}
       - VITE_HMR_PORT=${VITE_HMR_PORT:-}
       - VITE_HMR_CLIENT_PORT=${VITE_HMR_CLIENT_PORT:-}
-    container_name: lungai-front
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - lungai_backend
-    networks:
-      - n8n-network
+      - backend
+
 volumes:
   pfd_postgres_data:
-
-networks:
-  n8n-network:
-    external: true
