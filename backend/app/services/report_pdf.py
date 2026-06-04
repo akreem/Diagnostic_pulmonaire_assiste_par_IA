@@ -14,7 +14,7 @@ from app.models.user import User
 REPORT_TEMPLATE_HTML = """
 <article class="medical-report">
   <header>
-    <h1>PulmoDiag AI - Rapport d'analyse</h1>
+    <h1>LungAI - Rapport d'analyse</h1>
     <p>Rapport genere pour un professionnel de sante autorise.</p>
   </header>
   <section class="result-summary">
@@ -335,7 +335,7 @@ def generate_report_pdf(
         "BT",
         "/F1 18 Tf",
         "50 805 Td",
-        "(PulmoDiag AI - Rapport d'analyse) Tj",
+        "(LungAI - Rapport d'analyse) Tj",
         "ET",
         "0.04 0.65 0.91 RG 50 792 m 545 792 l S",
         "BT",
@@ -364,7 +364,7 @@ def generate_report_pdf(
             "BT",
             "/F1 9 Tf",
             "50 42 Td",
-            "(PulmoDiag AI | Rapport confidentiel | Page 1/1) Tj",
+            "(LungAI | Rapport confidentiel | Page 1/1) Tj",
             "ET",
         ]
     )

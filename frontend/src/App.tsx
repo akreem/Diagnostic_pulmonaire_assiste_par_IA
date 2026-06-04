@@ -64,7 +64,7 @@ export default function App() {
             <strong>{language === "ar" ? "وزارة الصحة" : "Ministère de la Santé"}</strong>
           </div>
           <div className="evax-brand-copy">
-            <span className="evax-mark">IA</span>
+            <img className="evax-mark app-logo-image" src="/lungai.jpeg" alt="LungAI" />
             <h1>{language === "ar" ? "منصة المساعدة على التشخيص الرئوي بالذكاء الاصطناعي" : "Plateforme d'Aide au Diagnostic Pulmonaire par IA"}</h1>
             <p>{language === "ar" ?  "فضاء آمن للإطار الطبي المرخص له " : "Espace sécurisé pour les professionnels de santé autorisés."}</p>
           </div>

@@ -34,7 +34,7 @@ def create_app() -> FastAPI:
     ensure_runtime_schema()
 
     application = FastAPI(
-        title="Pulmonary Diagnostic AI Platform API",
+        title="LungAI API",
         version="0.1.0",
         description="Secure pulmonary diagnostic API with authentication, audit, and image upload workflows.",
     )

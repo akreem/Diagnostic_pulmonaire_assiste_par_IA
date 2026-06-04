@@ -38,17 +38,17 @@ type Props = {
 
 const dashboardTranslations = {
   fr: {
-    overview: "Dashboard",
+    overview: "Tableau de bord",
     intake: "Analyses",
-    results: "Reports",
+    results: "Rapports",
     patients: "Historique des analyses",
-    admin: "Settings",
-    workspace: "Workspace",
-    diagnosticWorkstation: "Diagnostic Workstation",
+    admin: "Paramètres",
+    workspace: "Espace de travail",
+    diagnosticWorkstation: "Poste de diagnostic",
     lungsAssist: "Diagnostic pulmonaire assisté par IA",
     user: "Utilisateur",
     role: "Rôle",
-    email: "Email",
+    email: "Adresse e-mail",
     access: "Accès",
     active: "Actif",
     inactive: "Inactif",
@@ -67,7 +67,7 @@ const dashboardTranslations = {
     automated: "Automatisé",
     diagnosticsRepartition: "Répartition des diagnostics",
     pipelineStatus: "Statuts du pipeline",
-    secureIntake: "Secure intake",
+    secureIntake: "Dépôt sécurisé",
     importImages: "Importer des images médicales",
     secureDrop: "Dépôt sécurisé",
     chooseImages: "Choisir des images médicales",
@@ -118,11 +118,11 @@ const dashboardTranslations = {
     pipeline: "Pipeline",
     performance: "Performance",
     responsible: "Responsable",
-    diagnosticResult: "Diagnostic result",
+    diagnosticResult: "Résultat diagnostique",
     anonymizedExam: "Examen anonymisé",
     source: "Source",
     id: "ID",
-    reset: "Reset",
+    reset: "Réinitialiser",
     moveImage: "Déplacer l'image",
     zoomOut: "Réduire le zoom",
     zoomIn: "Agrandir le zoom",
@@ -296,11 +296,11 @@ const legacyRoutes: Record<string, PanelId> = {
 };
 
 const dashboardPages: Array<{ id: PanelId; title: string; icon: IconName; adminOnly?: boolean }> = [
-  { id: "overview", title: "Dashboard", icon: "dashboard" },
+  { id: "overview", title: "Tableau de bord", icon: "dashboard" },
   { id: "intake", title: "Analyses", icon: "analysis" },
-  { id: "results", title: "Reports", icon: "fileText" },
+  { id: "results", title: "Rapports", icon: "fileText" },
   { id: "patients", title: "Historique des analyses", icon: "patients" },
-  { id: "admin", title: "Settings", icon: "settings", adminOnly: true }
+  { id: "admin", title: "Paramètres", icon: "settings", adminOnly: true }
 ];
 
 function routeToPanel(pathname: string): PanelId {
@@ -1609,7 +1609,7 @@ export function DashboardPage({ user, language, onLanguageChange, onLogout }: Pr
         <section className="clinical-panel">
           <div className="panel-heading-row">
             <div>
-              <p className="section-kicker">{language === "ar" ? "سجل التحاليل" : "Analysis history"}</p>
+              <p className="section-kicker">{t.analysisHistory}</p>
               <h2>{t.recentAnalysesTitle}</h2>
             </div>
             <button className="secondary" onClick={() => navigateTo("patients")} type="button">
@@ -1711,7 +1711,7 @@ export function DashboardPage({ user, language, onLanguageChange, onLogout }: Pr
           <section className="clinical-panel">
             <div className="panel-heading-row" style={{ marginBottom: "16px" }}>
               <div>
-                <p className="section-kicker">{language === "ar" ? "إدارة الوصول" : "Access control"}</p>
+                <p className="section-kicker">{language === "ar" ? "إدارة الوصول" : "Contrôle d'accès"}</p>
                 <h2>{t.users}</h2>
               </div>
               <button className="secondary" onClick={loadUsers} type="button">
@@ -1809,7 +1809,7 @@ export function DashboardPage({ user, language, onLanguageChange, onLogout }: Pr
               <h2>{t.analysisHistory}</h2>
             </div>
             <button className="secondary" disabled={historyExporting} onClick={handleHistoryExport} type="button">
-              {historyExporting ? (language === "ar" ? "تصدير..." : "Export...") : t.exportCsv}
+              {historyExporting ? (language === "ar" ? "تصدير..." : "Exportation...") : t.exportCsv}
             </button>
           </div>
           <div className="history-filters">
@@ -1901,12 +1901,12 @@ export function DashboardPage({ user, language, onLanguageChange, onLogout }: Pr
     <main className="clinical-shell" dir={language === "ar" ? "rtl" : "ltr"}>
       <aside className="clinical-sidebar">
         <div className="clinical-brand">
-          <span>
-            <Icon name="lungs" />
+          <span className="clinical-logo-frame">
+            <img src="/lungai.jpeg" alt="" aria-hidden="true" />
           </span>
           <div>
-            <strong>PulmoDiag AI</strong>
-            <small>{language === "ar" ? "محطة التشخيص" : "Diagnostic Workstation"}</small>
+            <strong>LungAI</strong>
+            <small>{t.diagnosticWorkstation}</small>
           </div>
         </div>
 
@@ -1932,10 +1932,10 @@ export function DashboardPage({ user, language, onLanguageChange, onLogout }: Pr
       <section className="clinical-workspace">
         <header className="clinical-topbar">
           <div className="clinical-topbar-brand">
-            <span>
-              <Icon name="lungs" />
+            <span className="clinical-logo-frame">
+              <img src="/lungai.jpeg" alt="" aria-hidden="true" />
             </span>
-            <strong>PulmoDiag AI</strong>
+            <strong>LungAI</strong>
           </div>
 
           <div className="clinical-breadcrumb">

@@ -1,4 +1,4 @@
-# App Design Reference - Pulmonary Diagnostic AI Platform
+# App Design Reference - LungAI
 
 ## 1. Product Definition
 
@@ -393,4 +393,3 @@ The first application version should include:
 - Treat low-confidence predictions as review prompts, not final results.
 - Make every workflow resilient to model service failure.
 - Prefer simple, testable modules over premature platform complexity.
-

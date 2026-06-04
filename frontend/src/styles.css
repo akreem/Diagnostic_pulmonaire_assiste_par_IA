@@ -189,6 +189,12 @@ button.secondary:hover:not(:disabled) {
   width: 58px;
 }
 
+.app-logo-image {
+  display: block;
+  object-fit: contain;
+  padding: 4px;
+}
+
 .evax-brand-copy h1 {
   color: #172033;
   font-size: 38px;
@@ -1706,14 +1712,21 @@ select:focus {
 .clinical-brand > span,
 .clinical-topbar-brand > span {
   align-items: center;
-  background: var(--clinical-accent-soft);
-  border: 1px solid #bae6fd;
+  background: #ffffff;
+  border: 1px solid var(--clinical-border);
   border-radius: 8px;
   color: var(--clinical-accent-strong);
   display: inline-flex;
   height: 40px;
   justify-content: center;
   width: 40px;
+}
+
+.clinical-logo-frame img {
+  display: block;
+  height: 32px;
+  object-fit: contain;
+  width: 32px;
 }
 
 .clinical-brand strong,

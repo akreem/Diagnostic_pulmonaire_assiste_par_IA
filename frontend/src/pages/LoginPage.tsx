@@ -100,7 +100,7 @@ export function LoginPage({ language, onLanguageChange, onLogin }: Props) {
       </div>
 
       <div className="evax-login-title">
-        <span className="evax-login-logo">IA</span>
+        <img className="evax-login-logo app-logo-image" src="/lungai.jpeg" alt="LungAI" />
         <p>{t.professionalSpace}</p>
         <h1>{t.connection}</h1>
       </div>
@@ -149,4 +149,3 @@ export function LoginPage({ language, onLanguageChange, onLogin }: Props) {
     </form>
   );
 }
-

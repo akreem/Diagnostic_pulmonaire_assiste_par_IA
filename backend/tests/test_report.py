@@ -135,13 +135,13 @@ def test_user_can_download_own_pdf_report(tmp_path, monkeypatch):
     assert response.headers["content-type"] == "application/pdf"
     assert "attachment" in response.headers["content-disposition"]
     assert response.content.startswith(b"%PDF-1.4")
-    assert b"PulmoDiag AI" in response.content
+    assert b"LungAI" in response.content
     assert response.content.count(b"/Subtype /Image") == 2
     assert b"/ImSource" in response.content
     assert b"/ImHeatmap" in response.content
     assert b"(Image source) Tj" in response.content
     assert b"(Heatmap Grad-CAM) Tj" in response.content
-    assert b"PulmoDiag AI | Rapport confidentiel | Page 1/1" in response.content
+    assert b"LungAI | Rapport confidentiel | Page 1/1" in response.content
 
 
 def test_user_cannot_download_another_users_pdf_report(tmp_path, monkeypatch):

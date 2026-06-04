@@ -1,4 +1,4 @@
-**Product Backlog - Plateforme d'Aide au Diagnostic Pulmonaire par IA**
+**Product Backlog - LungAI**
 
 **1\. Structure du Product Backlog**
 
